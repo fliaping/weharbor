@@ -1,5 +1,8 @@
 # API 接入
 
+AI 工具可安装仓库自带的 [weflow-api skill](install-skill.md)，
+通过 Python 客户端执行下面的查询，并使用本地环境变量管理凭据。
+
 API 由原版 WeFlow 提供。先在设置中启用 HTTP API，设置监听地址为 0.0.0.0、
 端口为 Compose 配置的 WEFLOW_API_PORT，并生成 Token。
 Compose 只负责端口映射，不会覆盖 WeFlow 的持久化设置。

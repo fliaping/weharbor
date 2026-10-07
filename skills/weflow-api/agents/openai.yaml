@@ -1,0 +1,4 @@
+interface:
+  display_name: "WeFlow API"
+  short_description: "Query WeChat history and events through WeFlow"
+  default_prompt: "Use $weflow-api to find the requested WeChat session and summarize its relevant messages."

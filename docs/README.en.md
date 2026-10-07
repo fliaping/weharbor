@@ -40,7 +40,20 @@ All profiles, databases and settings persist in ./data, mounted at /config.
 Keep this directory and .env out of Git. Stop the container before backing it up.
 
 [API usage](api.md) · [Operations](operations.md) ·
+[AI skill installation](install-skill.md) ·
 [Third-party notices](../THIRD_PARTY_NOTICES.md)
+
+Install the bundled weflow-api Agent Skill from your AI project directory:
+
+~~~bash
+npx --yes skills add https://github.com/fliaping/weharbor --skill weflow-api --yes
+~~~
+
+Give your AI this installation URL:
+https://raw.githubusercontent.com/fliaping/weharbor/main/docs/install-skill.md
+The client needs Python 3.10+, a reachable WEFLOW_API_BASE and a locally configured
+WEFLOW_API_TOKEN (or WEFLOW_API_TOKEN_FILE). No pip dependencies are required.
+Installation does not configure or disclose account credentials.
 
 WeHarbor integration code is MIT licensed. Vendor components keep their own
 licenses. WeFlow's published source license includes a noncommercial condition;

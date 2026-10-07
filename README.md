@@ -8,7 +8,8 @@ wechat-selkies 的精简镜像，把官方 Linux 微信和 WeFlow 放在同一�
 消息推送。用户数据保存在一个 /config 卷中。
 
 [English](docs/README.en.md) · [API 接入](docs/api.md) ·
-[升级与迁移](docs/operations.md) · [组件许可](THIRD_PARTY_NOTICES.md)
+[升级与迁移](docs/operations.md) · [AI skill 安装](docs/install-skill.md) ·
+[组件许可](THIRD_PARTY_NOTICES.md)
 
 ## 当前状态
 
@@ -81,6 +82,25 @@ docker compose up -d
 
 浏览器通知需要 HTTPS 或 localhost，并且桌面页面保持打开。
 WeFlow 的 API Token 与网页登录密码分开管理。API 默认仅映射到宿主机回环地址。
+
+## 接入 AI 工具
+
+仓库提供可安装的 weflow-api skill，附带无需 pip 依赖的 Python 调用脚本。
+把下面的 URL 交给支持 Agent Skills、能执行命令的 AI 工具，并说
+“请安装这个 skill，并帮我检查连接配置”：
+
+https://raw.githubusercontent.com/fliaping/weharbor/main/docs/install-skill.md
+
+也可在 AI 项目目录直接执行：
+
+~~~bash
+npx --yes skills add https://github.com/fliaping/weharbor --skill weflow-api --yes
+~~~
+
+使用者自行在 AI 执行环境配置 WEFLOW_API_BASE 与 WEFLOW_API_TOKEN，
+或通过 WEFLOW_API_TOKEN_FILE 读取本地凭据文件。skill 支持聊天查询、群聊摘要、
+联系人、群成员和限时 SSE 订阅；Token 不需要提交到仓库或发送到聊天中。
+详细安装、联网与版本兼容说明见 [安装页](docs/install-skill.md)。
 
 ## 配置
 

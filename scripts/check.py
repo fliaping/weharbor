@@ -21,7 +21,7 @@ def main():
     dockerfile = (ROOT / 'Dockerfile').read_text()
     assert f'ARG BASE_IMAGE={lock["base_image"]}\n' in dockerfile
     assert f'ARG PROJECT_VERSION={lock["project_version"]}\n' in dockerfile
-    for directory in ['scripts', 'root']:
+    for directory in ['scripts', 'root', 'skills']:
         for path in (ROOT / directory).rglob('*'):
             if not path.is_file():
                 continue
