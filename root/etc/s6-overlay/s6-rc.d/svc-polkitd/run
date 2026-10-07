@@ -1,0 +1,7 @@
+#!/usr/bin/with-contenv bash
+
+until [ -S /run/dbus/system_bus_socket ]; do
+    sleep 0.25
+done
+
+exec s6-setuidgid polkitd /usr/lib/polkit-1/polkitd --no-debug

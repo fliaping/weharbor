@@ -1,0 +1,45 @@
+# API 接入
+
+API 由原版 WeFlow 提供。先在设置中启用 HTTP API，设置监听地址为 0.0.0.0、
+端口为 Compose 配置的 WEFLOW_API_PORT，并生成 Token。
+Compose 只负责端口映射，不会覆盖 WeFlow 的持久化设置。
+
+下面的例子从环境变量读取 Token；请在本地设置 WEFLOW_API_TOKEN。
+不要把实际 Token 放入文档、源码或公开日志。
+
+~~~bash
+# 健康检查不需要 Token。
+curl --fail http://127.0.0.1:5031/health
+
+# 查询会话。
+curl --fail -H "Authorization: Bearer $WEFLOW_API_TOKEN" \
+  http://127.0.0.1:5031/api/v1/sessions
+
+# 查询联系人。
+curl --fail -H "Authorization: Bearer $WEFLOW_API_TOKEN" \
+  http://127.0.0.1:5031/api/v1/contacts
+
+# 订阅实时消息。该上游 SSE 接口使用查询参数认证。
+curl --no-buffer --get \
+  --data-urlencode "access_token=$WEFLOW_API_TOKEN" \
+  http://127.0.0.1:5031/api/v1/push/messages
+~~~
+
+SSE 查询参数含凭据，反向代理访问日志应避免记录其原始查询串。
+消息推送还需要在 WeFlow 设置中开启主动推送。
+
+| 接口 | 用途 |
+| --- | --- |
+| GET /health | API 存活检查 |
+| GET /api/v1/sessions | 会话列表 |
+| GET /api/v1/messages | 按条件查询消息 |
+| GET /api/v1/contacts | 联系人 |
+| GET /api/v1/group-members | 群成员 |
+| GET /api/v1/push/messages | 实时消息 SSE |
+
+详细参数和响应结构以所用 WeFlow 版本为准。当前集成侧重本地聊天数据读取、
+查询与事件订阅。客户端在线并不代表账号数据库已经配置成功。
+
+其他容器接入时，建议让它们与 WeHarbor 使用同一个自定义 Docker 网络，
+通过服务名 weharbor:5031 访问；外部调用仍需使用 WeFlow Token。
+桌面反向代理需要转发 WebSocket，并关闭 /notifications/ 路径的响应缓冲。

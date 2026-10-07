@@ -1,0 +1,16 @@
+*
+!Dockerfile
+!versions.lock.json
+!LICENSE
+!THIRD_PARTY_NOTICES.md
+!licenses/
+!licenses/**
+!scripts/
+scripts/*
+!scripts/verify-assets.py
+!root/
+!root/**
+!downloads/
+downloads/*
+!downloads/weflow.tar.gz
+!downloads/wechat.deb

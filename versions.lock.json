@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "project_version": "0.1.0",
+  "platform": "linux/amd64",
+  "base_image": "ghcr.io/nickrunning/wechat-selkies:0.0.14-minimal@sha256:32b9094316b0bd267dc7d1778116a91a6a349fce20bb8dd652dbb9b38e0ef6ee",
+  "wechat": {
+    "version": "4.1.13.23",
+    "filename": "wechat.deb",
+    "original_filename": "WeChatLinux_4.1.13.23_amd64.deb",
+    "url": "https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_x86_64.deb",
+    "sha256": "b7d0f8d53e9f648bc2c77a6096a04100d008f2d9f0d3988a2a4859b5992aca0a"
+  },
+  "weflow": {
+    "version": "6.3.2",
+    "filename": "weflow.tar.gz",
+    "original_filename": "WeFlow-6.3.2-Setup.tar.gz",
+    "url": null,
+    "sha256": "7cd7b930725200951190eb7357b3e8b4494290a7ad68ce1e541a667fc1c65c70",
+    "asar_sha256": "7e1b81c18e1ad18185e778e0603c1ade145f33ba2bcb668f12f2f025cb6d1ecf"
+  }
+}

@@ -1,0 +1,12 @@
+#!/usr/bin/with-contenv bash
+
+if [[ "${ENABLE_APP_SWITCHER:-true}" != "true" ]]; then
+    exec sleep infinity
+fi
+
+until xset q >/dev/null 2>&1 && pgrep -u abc -x openbox >/dev/null 2>&1; do
+    sleep 0.5
+done
+
+exec s6-setuidgid abc \
+    /lsiopy/bin/python3 /scripts/app-switcher/app-switcher.py

@@ -1,0 +1,5 @@
+services:
+  weharbor:
+    build:
+      context: .
+      dockerfile: Dockerfile

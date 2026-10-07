@@ -1,0 +1,4 @@
+services:
+  weharbor:
+    devices:
+      - /dev/dri:/dev/dri

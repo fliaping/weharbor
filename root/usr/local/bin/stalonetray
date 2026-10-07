@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Keep the real XEmbed tray implementation, but style it as a small floating
+# utility window so the app switcher can position both windows as one group.
+exec /usr/bin/stalonetray \
+    --background "#171a20" \
+    --decorations none \
+    --geometry 1x1+0+0 \
+    --grow-gravity E \
+    --icon-gravity NW \
+    --icon-size 28 \
+    --max-geometry 4x1 \
+    --slot-size 40 \
+    --skip-taskbar \
+    --sticky \
+    --window-layer top \
+    --window-type utility \
+    "$@"

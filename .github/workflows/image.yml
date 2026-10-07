@@ -1,0 +1,73 @@
+name: Build and release image
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      weflow_download_url:
+        description: Trusted HTTPS URL for the original WeFlow archive
+        type: string
+        required: false
+      publish:
+        description: Publish the tested image to this repository's GHCR package
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  packages: write
+jobs:
+  image:
+    if: github.event_name == 'workflow_dispatch' || vars.WEFLOW_DOWNLOAD_URL != ''
+    runs-on: ubuntu-latest
+    env:
+      WEFLOW_DOWNLOAD_URL: ${{ inputs.weflow_download_url || vars.WEFLOW_DOWNLOAD_URL }}
+      PROJECT_SOURCE: ${{ github.server_url }}/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v4
+      - name: Validate
+        run: python3 scripts/check.py
+      - name: Determine image version
+        run: |
+          version="$(python3 -c 'import json; print(json.load(open("versions.lock.json"))["project_version"])')"
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            printf '%s\n' 'Release tag does not match versions.lock.json' >&2
+            exit 1
+          fi
+          printf 'RELEASE_VERSION=%s\n' "$version" >> "$GITHUB_ENV"
+          printf 'IMAGE_REPOSITORY=ghcr.io/%s\n' "${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - name: Prepare pinned assets
+        run: python3 scripts/prepare-assets.py
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: weharbor:ci
+          build-args: |
+            PROJECT_VERSION=${{ env.RELEASE_VERSION }}
+            PROJECT_SOURCE=${{ env.PROJECT_SOURCE }}
+            PROJECT_REVISION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Test fresh profile and restart
+        run: ./scripts/smoke-test.sh weharbor:ci
+      - name: Log in to GHCR
+        if: startsWith(github.ref, 'refs/tags/') || inputs.publish == true
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Publish tested image
+        if: startsWith(github.ref, 'refs/tags/') || inputs.publish == true
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE_REPOSITORY }}:${{ env.RELEASE_VERSION }}
+          build-args: |
+            PROJECT_VERSION=${{ env.RELEASE_VERSION }}
+            PROJECT_SOURCE=${{ env.PROJECT_SOURCE }}
+            PROJECT_REVISION=${{ github.sha }}
+          cache-from: type=gha
