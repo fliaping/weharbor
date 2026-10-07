@@ -30,8 +30,12 @@ init.sh generates a random password and detects your UID/GID without overwriting
 existing settings. The default bind address is localhost. Set BIND_ADDRESS=0.0.0.0
 to permit access from other machines while retaining browser authentication.
 
-Log in to WeChat using your phone, then configure your account and database key
-inside WeFlow. The usual database path is /config/Documents/xwechat_files.
+Follow the [first-run guide](first-run.en.md) after opening the desktop.
+First log in to create local data, then configure the database in WeFlow.
+Linux key acquisition restarts WeChat: disable automatic login, log out,
+start acquisition, and confirm login only after WeFlow is ready.
+The usual database path is /config/Documents/xwechat_files.
+Verify readable messages in WeFlow before enabling the API or installing a skill.
 Enable WeFlow's HTTP API on 0.0.0.0:5031, generate an API token, and enable its
 message push feature. Browser notifications require HTTPS or localhost and an
 open desktop page. API ports are published to host loopback by default.
@@ -39,7 +43,7 @@ open desktop page. API ports are published to host loopback by default.
 All profiles, databases and settings persist in ./data, mounted at /config.
 Keep this directory and .env out of Git. Stop the container before backing it up.
 
-[API usage](api.md) · [Operations](operations.md) ·
+[First-run guide](first-run.en.md) · [API usage](api.md) · [Operations](operations.md) ·
 [AI skill installation](install-skill.md) ·
 [Third-party notices](../THIRD_PARTY_NOTICES.md)
 

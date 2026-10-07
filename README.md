@@ -7,7 +7,7 @@ wechat-selkies 的精简镜像，把官方 Linux 微信和 WeFlow 放在同一�
 浏览器桌面里，提供窗口切换、浏览器通知，以及 WeFlow 的 HTTP API / SSE
 消息推送。用户数据保存在一个 /config 卷中。
 
-[English](docs/README.en.md) · [API 接入](docs/api.md) ·
+[English](docs/README.en.md) · [首次使用教程](docs/first-run.md) · [API 接入](docs/api.md) ·
 [升级与迁移](docs/operations.md) · [AI skill 安装](docs/install-skill.md) ·
 [组件许可](THIRD_PARTY_NOTICES.md)
 
@@ -72,13 +72,19 @@ docker compose up -d
 
 ## 首次设置
 
-1. 打开浏览器桌面，在微信中扫码登录，等待会话与聊天数据加载。
-2. 切换到 WeFlow，按向导选择账号并获取数据库密钥。
-3. 数据路径通常为 /config/Documents/xwechat_files，兼容链接指向
-   /config/xwechat_files；已有用户目录不会被替换。
-4. 在 WeFlow 设置中启用 HTTP API，端口使用 .env 中的 WEFLOW_API_PORT
-   （默认 5031），监听地址使用 0.0.0.0，并生成 API Token。
-5. 开启 WeFlow 的主动推送；浏览器桌面上点击“启用消息通知”，授予通知权限。
+第一次使用请按 [完整教程](docs/first-run.md) 操作，每一步都有完成标志和排障说明。
+
+1. 先扫码登录微信，等待本地账号与聊天数据库生成。
+2. 在 WeFlow 向导中自动检测数据库目录，通常为
+   /config/Documents/xwechat_files（兼容链接指向 /config/xwechat_files）。
+3. 获取密钥前退出微信登录、关闭自动登录；点击“自动获取密钥”，
+   等 WeFlow 准备完成后再在手机上确认登录。Linux 流程会重启微信。
+4. 完成配置，在 WeFlow 中打开一个会话并确认可以读到消息。图片密钥可另行配置。
+5. 启用 HTTP API，使用 0.0.0.0 和 .env 中的 WEFLOW_API_PORT（默认 5031），
+   生成 API Token；先查会话和消息验证读取，再安装 AI skill。
+
+需要实时通知时再开启 WeFlow 的主动推送，并在浏览器桌面点击“启用消息通知”。
+容器健康、API health 正常和 skill 安装成功，均不代表账号数据库已经可读。
 
 浏览器通知需要 HTTPS 或 localhost，并且桌面页面保持打开。
 WeFlow 的 API Token 与网页登录密码分开管理。API 默认仅映射到宿主机回环地址。
