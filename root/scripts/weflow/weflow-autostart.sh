@@ -1,6 +1,7 @@
 #!/bin/bash
 
 /scripts/notifications/notification-autostart.sh
+/scripts/weharbor/window-autostart.sh
 
 if [ "${AUTO_START_WEFLOW:-true}" = "true" ]; then
     # WeChat in this image stores its profile at /config/xwechat_files, while

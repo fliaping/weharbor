@@ -1,7 +1,10 @@
 name: Build and release image
 on:
   push:
+    branches: [main]
     tags: ['v*']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       weflow_download_url:
@@ -15,12 +18,16 @@ on:
 permissions:
   contents: read
   packages: write
+concurrency:
+  group: image-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 jobs:
   image:
-    if: github.event_name == 'workflow_dispatch' || vars.WEFLOW_DOWNLOAD_URL != ''
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       WEFLOW_DOWNLOAD_URL: ${{ inputs.weflow_download_url || vars.WEFLOW_DOWNLOAD_URL }}
+      WECHAT_DOWNLOAD_URL: ${{ vars.WECHAT_DOWNLOAD_URL }}
       PROJECT_SOURCE: ${{ github.server_url }}/${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +44,24 @@ jobs:
           printf 'RELEASE_VERSION=%s\n' "$version" >> "$GITHUB_ENV"
           printf 'IMAGE_REPOSITORY=ghcr.io/%s\n' "${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - name: Prepare pinned assets
+        # Cache only checksum-verified vendor archives, never a /config profile.
+        uses: actions/cache@v4
+        with:
+          path: downloads
+          key: vendor-amd64-${{ hashFiles('versions.lock.json') }}
+      - name: Download and verify pinned assets
         run: python3 scripts/prepare-assets.py
+      - name: Generate image tags and labels
+        id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_REPOSITORY }}
+          tags: |
+            type=raw,value=edge,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=sha-
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
       - name: Build
         uses: docker/build-push-action@v7
         with:
@@ -45,29 +69,27 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: weharbor:ci
+          labels: ${{ steps.metadata.outputs.labels }}
           build-args: |
             PROJECT_VERSION=${{ env.RELEASE_VERSION }}
             PROJECT_SOURCE=${{ env.PROJECT_SOURCE }}
             PROJECT_REVISION=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=weharbor-amd64
+          cache-to: type=gha,mode=max,scope=weharbor-amd64
       - name: Test fresh profile and restart
         run: ./scripts/smoke-test.sh weharbor:ci
       - name: Log in to GHCR
-        if: startsWith(github.ref, 'refs/tags/') || inputs.publish == true
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
       - name: Publish tested image
-        if: startsWith(github.ref, 'refs/tags/') || inputs.publish == true
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          platforms: linux/amd64
-          push: true
-          tags: ${{ env.IMAGE_REPOSITORY }}:${{ env.RELEASE_VERSION }}
-          build-args: |
-            PROJECT_VERSION=${{ env.RELEASE_VERSION }}
-            PROJECT_SOURCE=${{ env.PROJECT_SOURCE }}
-            PROJECT_REVISION=${{ github.sha }}
-          cache-from: type=gha
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'workflow_dispatch' && inputs.publish == true)
+        env:
+          IMAGE_TAGS: ${{ steps.metadata.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do
+            [[ -n "$tag" ]] || continue
+            docker tag weharbor:ci "$tag"
+            docker push "$tag"
+          done <<< "$IMAGE_TAGS"

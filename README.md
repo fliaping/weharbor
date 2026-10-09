@@ -27,6 +27,8 @@ WeFlow 6.3.2 的历史公开下载链接暂未确认。因此当前源码构建�
 
 - 在浏览器里使用官方 Linux 微信与 WeFlow，支持上游的中文输入和剪贴板。
 - 悬浮窗口切换器，在微信和 WeFlow 间切换，并管理系统托盘。
+- WeFlow 默认最小化，微信默认获得焦点；登录后只自动最大化微信主窗口一次。
+  后续打开的聊天、设置等子窗口保持自己的尺寸，手动还原主窗口后不会被再次最大化。
 - 将聊天推送与桌面通知转发为浏览器原生通知。
 - 支持 PWA 安装，以独立窗口从电脑桌面或手机主屏幕打开。
 - 通过 WeFlow 查询会话、消息、联系人与群成员，并订阅 SSE 消息事件。
@@ -53,9 +55,9 @@ docker compose up -d
 也可在准备好安装包后运行 ./scripts/quickstart.sh，自动初始化、构建缺失的
 本地镜像并启动。配置预构建镜像地址后，同一入口会拉取镜像再启动。
 
-build.sh 会校验 WeFlow，并从微信官网下载锁定版本的 deb；也可提前把
+build.sh 会校验 WeFlow，并从本仓库的 component-assets Release 下载锁定版本的微信 deb；也可提前把
 WeChatLinux_4.1.13.23_amd64.deb 放到 downloads/wechat.deb。
-官方链接会随发布变化，下载到其他版本时构建会明确失败，需要更新版本锁定文件。
+Release 中仅保存校验通过的原版安装包；下载到其他版本时构建会明确失败。
 
 打开 https://localhost:3001，使用 .env 中的 CUSTOM_USER 和 PASSWORD 登录。
 首次 HTTPS 使用自签名证书。init.sh 会生成随机网页登录密码，并自动设置
@@ -127,6 +129,7 @@ npx --yes skills add https://github.com/fliaping/weharbor --skill weflow-api --y
 | WEFLOW_API_PORT | 5031 | 须与 WeFlow 设置一致 |
 | PUID / PGID | init.sh 检测 | 持久化文件所属用户 |
 | ENABLE_APP_SWITCHER | true | 悬浮切换器 |
+| ENABLE_WINDOW_DEFAULTS | true | 初始窗口布局；关闭后保留自定义窗口行为 |
 | ENABLE_BROWSER_NOTIFICATIONS | true | 浏览器通知 |
 
 GPU 加速可选：宿主机存在 /dev/dri 时运行
@@ -145,7 +148,9 @@ python3 scripts/check.py
 构建过程不修改 WeFlow 应用文件。root/ 只保存本项目的集成层；上游桌面与微信
 启动脚本继续从基础镜像复用。
 
-GitHub Actions 提供静态验证与测试，以及可选的构建、烟雾测试和 GHCR 发布。
+GitHub Actions 在 main 推送、PR、版本标签和手动触发时构建并测试镜像。
+main 的测试通过后发布 GHCR 的 edge / sha 标签，版本标签发布固定版本 / latest。
+首次构建需配置锁定版本的安装包下载地址，详见发布说明。
 部署与发布说明见 docs/operations.md。
 
 ## 许可与致谢

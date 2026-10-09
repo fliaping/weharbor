@@ -7,7 +7,7 @@
     "version": "4.1.13.23",
     "filename": "wechat.deb",
     "original_filename": "WeChatLinux_4.1.13.23_amd64.deb",
-    "url": "https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_x86_64.deb",
+    "url": "https://github.com/fliaping/weharbor/releases/download/component-assets/WeChatLinux_4.1.13.23_amd64.deb",
     "sha256": "b7d0f8d53e9f648bc2c77a6096a04100d008f2d9f0d3988a2a4859b5992aca0a"
   },
   "weflow": {

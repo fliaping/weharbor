@@ -80,6 +80,8 @@ assert version == lock['wechat']['version'], version
 asar = Path('/opt/weflow/resources/app.asar')
 assert hashlib.sha256(asar.read_bytes()).hexdigest() == lock['weflow']['asar_sha256']
 assert Path('/config/Documents/xwechat_files').is_symlink()
+subprocess.run(['pgrep', '-f', '^python3 /scripts/weharbor/window-layout.py$'],
+               check=True, stdout=subprocess.DEVNULL)
 subprocess.run(['dpkg', '--verify', 'wechat'], check=True)
 print('Pinned versions, original ASAR and data-path compatibility passed')
 PY
@@ -90,4 +92,19 @@ for ((attempt=0; attempt<60; attempt++)); do
     sleep 2
 done
 [[ "$ready" == true ]] || { printf '%s\n' 'Restart health check failed' >&2; exit 1; }
+docker exec -i "$container" python3 - <<'PY'
+import subprocess
+import xml.etree.ElementTree as ET
+from pathlib import Path
+subprocess.run(['pgrep', '-f', '^python3 /scripts/weharbor/window-layout.py$'],
+               check=True, stdout=subprocess.DEVNULL)
+config = Path('/config/.config/openbox/rc.xml')
+assert config.read_text().count('WeHarbor window defaults: begin') == 1
+rules = ET.parse(config).findall('.//{*}application')
+wechat = [r for r in rules if r.get('class') == 'wechat'][-1]
+assert wechat.find('{*}maximized').text == 'no'
+weflow = [r for r in rules if r.get('class') == 'weflow' and r.get('title') == 'WeFlow'][-1]
+assert weflow.find('{*}iconic').text == 'yes'
+print('Window helper, main-only maximize defaults and repeatable restart passed')
+PY
 printf '%s\n' 'WeHarbor fresh-profile smoke test passed, including restart'

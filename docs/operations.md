@@ -52,10 +52,24 @@ docker compose exec weharbor weharbor-health
 同一个微信数据目录不能同时由两个容器使用。迁移保留现有 WeFlow 配置，
 不会自动修改其 API Token、监听地址或推送开关。
 
+## 初始窗口布局
+
+WeFlow 主窗口默认最小化，微信先获得焦点。登录后只最大化当前微信进程的
+一个主窗口一次；聊天、图片、设置等后续子窗口不自动最大化。用户手动还原
+主窗口后，助手不会强制再次最大化。微信重启或重新创建主窗口后会重新识别。
+
+窗口默认规则在 Openbox 配置中有 WeHarbor 标记，只替换本项目管理的规则，
+保留其他窗口规则、快捷键和桌面设置。设 ENABLE_WINDOW_DEFAULTS=false
+并重建容器可关闭助手；要恢复自己的 Openbox 默认行为，同时删除 rc.xml 中
+WeHarbor window defaults: begin / end 之间的规则，重新加载 Openbox。
+日志位于 /config/.local/log/weharbor-window-layout.log。
+
 ## 源码构建
 
 versions.lock.json 记录准确版本、平台、基础镜像 digest 和安装包校验值。
-微信官方的下载链接会变化；旧包可缓存在 downloads/wechat.deb。
+微信 deb 默认从本仓库的 component-assets Release 下载，避免官网地址滚动更新版本；
+也可提前放在 downloads/wechat.deb。Release 附件仅包含原版安装包，
+不包含部署配置、账号目录或密钥。
 WeFlow 包可放在 downloads/weflow.tar.gz，或通过 WEFLOW_DOWNLOAD_URL 下载。
 两个下载目录中的文件均不会被提交到 Git。
 
@@ -71,9 +85,23 @@ build.sh 接受额外 Buildx 参数；一旦显式传参，需自己提供 --tag
 ## GitHub Actions 与镜像发布
 
 validate.yml 在推送和 PR 时验证脚本、配置与资产处理测试。
-image.yml 支持手动构建：输入可信 WeFlow 下载 URL，默认只构建和测试；
-明确选择 publish 后才向当前仓库对应的 GHCR 地址推送。
-若配置仓库变量 WEFLOW_DOWNLOAD_URL，版本标签推送也可执行镜像发布。
+image.yml 在 main 推送、PR、v* 版本标签及手动触发时运行：
+
+- main：构建并验证全新数据目录及容器重启，通过后发布 edge 和 sha-<提交>。
+- PR：只构建与测试，不登录镜像仓库、不发布。
+- v<版本>：与 versions.lock.json 的 project_version 一致时发布版本、latest 和 sha 标签。
+- 手动：默认只构建与测试，勾选 publish 后发布当前分支对应标签。
+
+镜像地址为 ghcr.io/<仓库所有者>/<仓库名>，使用 GitHub 自动提供的 GITHUB_TOKEN
+发布 GHCR，无需把个人 Token 写入代码。Buildx 缓存与校验过的安装包缓存独立保存。
+发布直接推送已经通过烟雾测试的镜像，不再重新构建。
+
+首次运行需在仓库 Settings → Secrets and variables → Actions → Variables 设置
+WEFLOW_DOWNLOAD_URL，或在手动构建时输入原版 6.3.2 安装包的可信 HTTPS URL。
+可选 WECHAT_DOWNLOAD_URL 可覆盖微信 deb 的地址；不设置时使用版本锁定文件中的 Release 附件地址。
+下载内容必须通过 versions.lock.json 的 SHA256 校验。地址缺失或版本不匹配时
+工作流会明确失败，不会静默跳过整个镜像任务。缓存只包含 downloads 安装包，
+不包含用户配置、账号数据和凭据。
 fork 的发布地址自动跟随 github.repository，不绑定某个个人账号。
 
 准备公开镜像时，应先确认原版 WeFlow 6.3.2 及所含原生组件的分发许可，

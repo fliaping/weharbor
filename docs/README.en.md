@@ -14,6 +14,8 @@ Requirements: Docker Engine with Compose v2 / Buildx, Python 3.10+ and an amd64 
 Provide the original WeFlow 6.3.2 archive; its historical public download URL has
 not yet been confirmed. Alternatively set WEFLOW_DOWNLOAD_URL to a trusted HTTPS
 asset URL. Every package must match the pinned SHA256.
+The pinned WeChat deb is downloaded from this repository's component-assets
+Release, which contains only the original installer and no user profiles or credentials.
 
 ~~~bash
 git clone https://github.com/fliaping/weharbor.git
@@ -26,6 +28,11 @@ docker compose up -d
 ~~~
 
 Open https://localhost:3001 with the browser credentials stored in .env.
+
+WeFlow initially opens minimized and WeChat receives focus. After login, only
+the identified WeChat main window is maximized once. Later child windows keep
+their own size; manually restoring the main window is respected. Set
+ENABLE_WINDOW_DEFAULTS=false to disable the helper.
 
 PWA installation is supported: open the desktop over HTTPS with a trusted
 certificate and click “安装 WeHarbor” when Chrome/Edge offers installation.
@@ -49,6 +56,11 @@ open desktop page. API ports are published to host loopback by default.
 
 All profiles, databases and settings persist in ./data, mounted at /config.
 Keep this directory and .env out of Git. Stop the container before backing it up.
+
+The image workflow builds and tests main pushes, PRs, version tags and manual
+runs. Successful main builds publish GHCR edge / sha tags; matching version tags
+publish the version / latest. Configure WEFLOW_DOWNLOAD_URL for the first build.
+PRs never publish, and only the exact image that passed the smoke test is pushed.
 
 [First-run guide](first-run.en.md) · [API usage](api.md) · [Operations](operations.md) ·
 [AI skill installation](install-skill.md) ·
