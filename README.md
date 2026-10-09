@@ -15,7 +15,9 @@ wechat-selkies 的精简镜像，把官方 Linux 微信和 WeFlow 放在同一�
 ## 当前状态
 
 首版源码与本地构建版本为 0.1.0，源码仓库为
-[fliaping/weharbor](https://github.com/fliaping/weharbor)。预构建镜像尚未发布。
+[fliaping/weharbor](https://github.com/fliaping/weharbor)。预构建镜像已发布到
+ghcr.io/fliaping/weharbor:edge，可直接匿名拉取。edge 跟随 main；固定提交标签
+ghcr.io/fliaping/weharbor:sha-06cb008 已通过首次启动与重启测试。
 当前组合：WeChat 4.1.13.23、WeFlow 6.3.2、wechat-selkies 0.0.14-minimal。
 目前仅支持 linux/amd64；不提供未经验证的 ARM64 镜像。
 
@@ -36,6 +38,26 @@ wechat-selkies 的精简镜像，把官方 Linux 微信和 WeFlow 放在同一�
 
 首次使用仍需要手机扫码登录微信，并在 WeFlow 中完成账号与数据库配置。
 这里提供的数据 API 不承诺自动发送微信消息或实现机器人协议。
+
+## 使用预构建镜像
+
+需要 Linux amd64 主机、Docker Engine 和 Compose v2。先获取配置并初始化：
+
+~~~bash
+git clone https://github.com/fliaping/weharbor.git
+cd weharbor
+./scripts/init.sh
+~~~
+
+把 .env 中的 WEHARBOR_IMAGE 设置为 ghcr.io/fliaping/weharbor:edge，然后启动：
+
+~~~bash
+docker compose pull
+docker compose up -d
+~~~
+
+打开 https://localhost:3001，使用 .env 中生成的网页登录凭据。
+首次登录、数据库与 API 配置见 [首次使用教程](docs/first-run.md)。
 
 ## 本地构建与启动
 
@@ -70,7 +92,7 @@ BIND_ADDRESS=0.0.0.0，再运行 docker compose up -d。
 iPhone / iPad 使用 Safari 的“添加到主屏幕”。局域网 HTTP IP 与不可信的
 自签名证书可能无法安装；详见 [PWA 安装说明](docs/pwa.md)。
 
-预构建镜像发布后，把 .env 的 WEHARBOR_IMAGE 改成发布页给出的地址，然后：
+已有部署切换到预构建镜像时，把 .env 的 WEHARBOR_IMAGE 改成上面的镜像地址，然后：
 
 ~~~bash
 docker compose pull

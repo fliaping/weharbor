@@ -6,7 +6,29 @@ Linux WeChat and an unmodified WeFlow distribution.
 
 Version 0.1.0 currently includes WeChat 4.1.13.23 and WeFlow 6.3.2, on linux/amd64.
 Source: [fliaping/weharbor](https://github.com/fliaping/weharbor).
-The prebuilt image has not been published yet.
+The prebuilt image is available for anonymous pulls as ghcr.io/fliaping/weharbor:edge.
+The edge tag follows main; ghcr.io/fliaping/weharbor:sha-06cb008 pins the first
+build that passed fresh-profile and restart tests.
+
+## Use the prebuilt image
+
+Requirements: Docker Engine, Compose v2 and a Linux amd64 host.
+
+~~~bash
+git clone https://github.com/fliaping/weharbor.git
+cd weharbor
+./scripts/init.sh
+~~~
+
+Set WEHARBOR_IMAGE=ghcr.io/fliaping/weharbor:edge in .env, then run:
+
+~~~bash
+docker compose pull
+docker compose up -d
+~~~
+
+Open https://localhost:3001 using the generated credentials in .env.
+Follow the [first-run guide](first-run.en.md) to configure WeChat and WeFlow.
 
 ## Build and start
 

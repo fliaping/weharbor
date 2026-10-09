@@ -30,7 +30,8 @@ docker compose start
 
 如果修改了 DATA_DIR，请使用实际路径备份。备份包含账号数据与凭据，需要妥善保管。
 
-预构建镜像发布后，使用固定版本标签更新：
+预构建镜像已发布。edge 跟随 main，固定部署可使用经过测试的提交标签
+（例如 ghcr.io/fliaping/weharbor:sha-06cb008）或镜像 digest。更新：
 
 ~~~bash
 # 先将 .env 中的 WEHARBOR_IMAGE 设置为目标版本。
@@ -110,4 +111,5 @@ fork 的发布地址自动跟随 github.repository，不绑定某个个人账号
 构建能成功并不等于已经确认所有二进制组件的再分发授权。
 
 源码仓库：[fliaping/weharbor](https://github.com/fliaping/weharbor)。
-当前仅发布集成源码，预构建镜像尚未发布。
+预构建镜像 ghcr.io/fliaping/weharbor:edge 支持匿名拉取；首次通过
+完整构建、空数据目录启动与重启测试的提交标签为 sha-06cb008。
