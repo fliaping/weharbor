@@ -11,17 +11,15 @@ The prebuilt image has not been published yet.
 ## Build and start
 
 Requirements: Docker Engine with Compose v2 / Buildx, Python 3.10+ and an amd64 host.
-Provide the original WeFlow 6.3.2 archive; its historical public download URL has
-not yet been confirmed. Alternatively set WEFLOW_DOWNLOAD_URL to a trusted HTTPS
-asset URL. Every package must match the pinned SHA256.
-The pinned WeChat deb is downloaded from this repository's component-assets
-Release, which contains only the original installer and no user profiles or credentials.
+The pinned WeFlow 6.3.2 archive and WeChat deb are downloaded automatically from
+this repository's component-assets Release. Every package must match the pinned
+SHA256. The Release contains only original installers and their checksums, with
+no user profiles or credentials. WEFLOW_DOWNLOAD_URL / WECHAT_DOWNLOAD_URL can
+override the download addresses while retaining checksum verification.
 
 ~~~bash
 git clone https://github.com/fliaping/weharbor.git
 cd weharbor
-mkdir -p downloads
-cp /path/to/WeFlow-6.3.2-Setup.tar.gz downloads/weflow.tar.gz
 ./scripts/init.sh
 ./scripts/build.sh
 docker compose up -d
@@ -59,7 +57,7 @@ Keep this directory and .env out of Git. Stop the container before backing it up
 
 The image workflow builds and tests main pushes, PRs, version tags and manual
 runs. Successful main builds publish GHCR edge / sha tags; matching version tags
-publish the version / latest. Configure WEFLOW_DOWNLOAD_URL for the first build.
+publish the version / latest. No additional download variables are required.
 PRs never publish, and only the exact image that passed the smoke test is pushed.
 
 [First-run guide](first-run.en.md) · [API usage](api.md) · [Operations](operations.md) ·

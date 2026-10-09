@@ -52,7 +52,7 @@ def main():
     parser.add_argument('--check-only', action='store_true')
     args = parser.parse_args()
     lock = json.loads((ROOT / 'versions.lock.json').read_text())
-    # Check WeFlow first: its historical public release URL is not yet confirmed.
+    # Both default URLs point to the pinned, unmodified Release assets.
     for component in ['weflow', 'wechat']:
         prepare(component, lock[component], ROOT / 'downloads', args.check_only)
 

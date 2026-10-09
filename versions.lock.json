@@ -14,7 +14,7 @@
     "version": "6.3.2",
     "filename": "weflow.tar.gz",
     "original_filename": "WeFlow-6.3.2-Setup.tar.gz",
-    "url": null,
+    "url": "https://github.com/fliaping/weharbor/releases/download/component-assets/WeFlow-6.3.2-Setup.tar.gz",
     "sha256": "7cd7b930725200951190eb7357b3e8b4494290a7ad68ce1e541a667fc1c65c70",
     "asar_sha256": "7e1b81c18e1ad18185e778e0603c1ade145f33ba2bcb668f12f2f025cb6d1ecf"
   }

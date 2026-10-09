@@ -19,9 +19,9 @@ wechat-selkies 的精简镜像，把官方 Linux 微信和 WeFlow 放在同一�
 当前组合：WeChat 4.1.13.23、WeFlow 6.3.2、wechat-selkies 0.0.14-minimal。
 目前仅支持 linux/amd64；不提供未经验证的 ARM64 镜像。
 
-WeFlow 6.3.2 的历史公开下载链接暂未确认。因此当前源码构建需要用户提供
-原版安装包，或通过 WEFLOW_DOWNLOAD_URL 指定可信下载地址；校验值固定，
-不会退回第三方镜像或跳过验证。公开预构建镜像发布后，使用者只需拉取镜像。
+微信和 WeFlow 的锁定版本原版安装包保存在本仓库的 component-assets Release。
+源码构建会自动下载并验证 SHA256，无需自行寻找安装包或配置下载地址。
+也可通过 WECHAT_DOWNLOAD_URL / WEFLOW_DOWNLOAD_URL 覆盖地址，校验值保持固定。
 
 ## 能力
 
@@ -45,18 +45,17 @@ WeFlow 6.3.2 的历史公开下载链接暂未确认。因此当前源码构建�
 ~~~bash
 git clone https://github.com/fliaping/weharbor.git
 cd weharbor
-mkdir -p downloads
-cp /path/to/WeFlow-6.3.2-Setup.tar.gz downloads/weflow.tar.gz
 ./scripts/init.sh
 ./scripts/build.sh
 docker compose up -d
 ~~~
 
-也可在准备好安装包后运行 ./scripts/quickstart.sh，自动初始化、构建缺失的
+也可运行 ./scripts/quickstart.sh，自动准备安装包、初始化、构建缺失的
 本地镜像并启动。配置预构建镜像地址后，同一入口会拉取镜像再启动。
 
-build.sh 会校验 WeFlow，并从本仓库的 component-assets Release 下载锁定版本的微信 deb；也可提前把
-WeChatLinux_4.1.13.23_amd64.deb 放到 downloads/wechat.deb。
+build.sh 会从本仓库的 component-assets Release 下载锁定版本的两个安装包。
+也可提前把 WeFlow-6.3.2-Setup.tar.gz 放到 downloads/weflow.tar.gz，
+把 WeChatLinux_4.1.13.23_amd64.deb 放到 downloads/wechat.deb。
 Release 中仅保存校验通过的原版安装包；下载到其他版本时构建会明确失败。
 
 打开 https://localhost:3001，使用 .env 中的 CUSTOM_USER 和 PASSWORD 登录。
@@ -150,7 +149,7 @@ python3 scripts/check.py
 
 GitHub Actions 在 main 推送、PR、版本标签和手动触发时构建并测试镜像。
 main 的测试通过后发布 GHCR 的 edge / sha 标签，版本标签发布固定版本 / latest。
-首次构建需配置锁定版本的安装包下载地址，详见发布说明。
+安装包默认从固定 Release 下载并校验，无需配置额外 Actions 变量。
 部署与发布说明见 docs/operations.md。
 
 ## 许可与致谢

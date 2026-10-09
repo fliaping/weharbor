@@ -8,7 +8,7 @@ It does not relicense vendor applications, base-image packages or native librari
 | wechat-selkies | https://github.com/nickrunning/wechat-selkies | MIT; pinned minimal base image. The original notice is in licenses/wechat-selkies.MIT.txt. |
 | LinuxServer.io / Selkies | Dependencies provided by the pinned base image | Their upstream licenses and installed package notices remain applicable. |
 | Official Linux WeChat | https://linux.weixin.qq.com/ | Proprietary vendor distribution. The original deb is mirrored in the component-assets Release with its pinned SHA256; its application and package files remain unchanged. Verify redistribution terms before publishing a combined image. |
-| WeFlow | https://github.com/hicccc77/WeFlow | Published source carries CC BY-NC-SA 4.0. A reference license is retained in licenses/WeFlow.CC-BY-NC-SA-4.0.txt. Exact 6.3.2 binary/native redistribution terms remain unverified. |
+| WeFlow | https://github.com/hicccc77/WeFlow | The original 6.3.2 archive is mirrored in the component-assets Release with its pinned SHA256. Published source carries CC BY-NC-SA 4.0. A reference license is retained in licenses/WeFlow.CC-BY-NC-SA-4.0.txt. Exact 6.3.2 binary/native redistribution terms remain unverified. |
 | Electron / Chromium / WeFlow native libraries | Included in the original WeFlow archive | Original files and embedded notices are retained unchanged under /opt/weflow. |
 
 The WeFlow reference license was retained from a previously provided upstream

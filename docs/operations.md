@@ -67,14 +67,15 @@ WeHarbor window defaults: begin / end 之间的规则，重新加载 Openbox。
 ## 源码构建
 
 versions.lock.json 记录准确版本、平台、基础镜像 digest 和安装包校验值。
-微信 deb 默认从本仓库的 component-assets Release 下载，避免官网地址滚动更新版本；
-也可提前放在 downloads/wechat.deb。Release 附件仅包含原版安装包，
+微信 deb 和 WeFlow tar.gz 默认从本仓库的 component-assets Release 下载，
+避免官网地址滚动更新版本。Release 附件仅包含原版安装包及校验清单，
 不包含部署配置、账号目录或密钥。
-WeFlow 包可放在 downloads/weflow.tar.gz，或通过 WEFLOW_DOWNLOAD_URL 下载。
+离线构建可提前把两个安装包分别放在 downloads/wechat.deb 和 downloads/weflow.tar.gz。
+WECHAT_DOWNLOAD_URL / WEFLOW_DOWNLOAD_URL 可覆盖下载地址，但仍须通过锁定校验值。
 两个下载目录中的文件均不会被提交到 Git。
 
 ~~~bash
-python3 scripts/prepare-assets.py --check-only
+python3 scripts/prepare-assets.py
 ./scripts/build.sh
 ./scripts/smoke-test.sh weharbor:0.1.0
 ~~~
@@ -96,9 +97,9 @@ image.yml 在 main 推送、PR、v* 版本标签及手动触发时运行：
 发布 GHCR，无需把个人 Token 写入代码。Buildx 缓存与校验过的安装包缓存独立保存。
 发布直接推送已经通过烟雾测试的镜像，不再重新构建。
 
-首次运行需在仓库 Settings → Secrets and variables → Actions → Variables 设置
-WEFLOW_DOWNLOAD_URL，或在手动构建时输入原版 6.3.2 安装包的可信 HTTPS URL。
-可选 WECHAT_DOWNLOAD_URL 可覆盖微信 deb 的地址；不设置时使用版本锁定文件中的 Release 附件地址。
+首次运行无需额外配置，两个安装包均使用版本锁定文件中的 Release 附件地址。
+需要镜像下载来源时，可在仓库 Settings → Secrets and variables → Actions → Variables
+设置 WEFLOW_DOWNLOAD_URL / WECHAT_DOWNLOAD_URL；手动构建也可输入 WeFlow 的可信 HTTPS URL。
 下载内容必须通过 versions.lock.json 的 SHA256 校验。地址缺失或版本不匹配时
 工作流会明确失败，不会静默跳过整个镜像任务。缓存只包含 downloads 安装包，
 不包含用户配置、账号数据和凭据。
