@@ -55,8 +55,10 @@ RUN test -f /defaults/default.conf \
     && sed -i '\|location SUBFOLDERfiles {|i\  include /defaults/notification-proxy.conf;' /defaults/default.conf \
     && sed -i 's#</body>#<script src="./browser-notifications.js"></script></body>#' \
         /usr/share/selkies/selkies-dashboard/index.html \
-    && cp /usr/share/selkies/selkies-dashboard/browser-notifications.js \
-        /usr/share/selkies/web/browser-notifications.js \
+    && if [ -d /usr/share/selkies/web ]; then \
+        cp /usr/share/selkies/selkies-dashboard/browser-notifications.js \
+            /usr/share/selkies/web/browser-notifications.js; \
+    fi \
     && python3 /scripts/weharbor/install-web.py \
     && chmod 0755 \
         /etc/s6-overlay/s6-rc.d/svc-app-switcher/run \
