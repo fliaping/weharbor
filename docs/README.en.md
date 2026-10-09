@@ -26,6 +26,13 @@ docker compose up -d
 ~~~
 
 Open https://localhost:3001 with the browser credentials stored in .env.
+
+PWA installation is supported: open the desktop over HTTPS with a trusted
+certificate and click “安装 WeHarbor” when Chrome/Edge offers installation.
+On iPhone/iPad, use Safari's Share → Add to Home Screen. Plain HTTP on a LAN IP
+and untrusted certificates may prevent installation. Installed apps still need
+the server and network; chat data and desktop frames are never cached by the
+Service Worker. See [installation details](pwa.md).
 init.sh generates a random password and detects your UID/GID without overwriting
 existing settings. The default bind address is localhost. Set BIND_ADDRESS=0.0.0.0
 to permit access from other machines while retaining browser authentication.

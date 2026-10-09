@@ -1,4 +1,4 @@
-# WeHarbor · 微港
+# WeHarbor｜微港
 
 把微信桌面、聊天数据 API 和实时消息通知装进一个容器。
 
@@ -9,6 +9,7 @@ wechat-selkies 的精简镜像，把官方 Linux 微信和 WeFlow 放在同一�
 
 [English](docs/README.en.md) · [首次使用教程](docs/first-run.md) · [API 接入](docs/api.md) ·
 [升级与迁移](docs/operations.md) · [AI skill 安装](docs/install-skill.md) ·
+[安装为桌面应用](docs/pwa.md) ·
 [组件许可](THIRD_PARTY_NOTICES.md)
 
 ## 当前状态
@@ -27,6 +28,7 @@ WeFlow 6.3.2 的历史公开下载链接暂未确认。因此当前源码构建�
 - 在浏览器里使用官方 Linux 微信与 WeFlow，支持上游的中文输入和剪贴板。
 - 悬浮窗口切换器，在微信和 WeFlow 间切换，并管理系统托盘。
 - 将聊天推送与桌面通知转发为浏览器原生通知。
+- 支持 PWA 安装，以独立窗口从电脑桌面或手机主屏幕打开。
 - 通过 WeFlow 查询会话、消息、联系人与群成员，并订阅 SSE 消息事件。
 - 单容器、单数据卷；保留原版 WeFlow ASAR 和原生组件。
 
@@ -62,6 +64,10 @@ WeChatLinux_4.1.13.23_amd64.deb 放到 downloads/wechat.deb。
 默认只绑定本机地址。需要从其他机器访问时，在 .env 设置
 BIND_ADDRESS=0.0.0.0，再运行 docker compose up -d。
 通过正式域名访问时，用支持 WebSocket / SSE 的 HTTPS 反向代理转发桌面端口。
+
+使用可信 HTTPS 域名打开后，可点击“安装 WeHarbor”安装为桌面应用。
+iPhone / iPad 使用 Safari 的“添加到主屏幕”。局域网 HTTP IP 与不可信的
+自签名证书可能无法安装；详见 [PWA 安装说明](docs/pwa.md)。
 
 预构建镜像发布后，把 .env 的 WEHARBOR_IMAGE 改成发布页给出的地址，然后：
 

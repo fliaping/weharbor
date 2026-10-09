@@ -35,7 +35,7 @@ if [[ "$ready" != true ]]; then
 fi
 export SMOKE_URL="http://$(docker port "$container" 3000/tcp | head -n 1)"
 python3 - <<'PY'
-import base64, os, urllib.error, urllib.request
+import base64, json, os, struct, urllib.error, urllib.request
 url = os.environ['SMOKE_URL'] + '/'
 try:
     urllib.request.urlopen(url, timeout=5)
@@ -47,7 +47,29 @@ headers = {'Authorization': 'Basic ' + base64.b64encode(('weharbor:' + os.enviro
 with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=5) as response:
     assert response.status == 200
     assert b'browser-notifications.js' in response.read()
-print('Browser authentication and notification integration passed')
+for path in ['weharbor.webmanifest', 'weharbor-sw.js', 'pwa-icons/icon-512.png']:
+    try:
+        urllib.request.urlopen(url + path, timeout=5)
+    except urllib.error.HTTPError as error:
+        assert error.code == 401, (path, error.code)
+    else:
+        raise SystemExit('PWA resource unexpectedly allows anonymous access: ' + path)
+with urllib.request.urlopen(urllib.request.Request(url + 'weharbor.webmanifest', headers=headers), timeout=5) as response:
+    assert response.headers.get_content_type() == 'application/manifest+json'
+    manifest = json.load(response)
+    assert manifest['name'] == 'WeHarbor｜微港'
+    assert manifest['start_url'] == manifest['scope'] == './'
+for icon in manifest['icons']:
+    with urllib.request.urlopen(urllib.request.Request(url + icon['src'], headers=headers), timeout=5) as response:
+        data = response.read()
+        assert data[:8] == b'\x89PNG\r\n\x1a\n'
+        width, height = struct.unpack('>II', data[16:24])
+        assert icon['sizes'] == f'{width}x{height}'
+with urllib.request.urlopen(urllib.request.Request(url + 'weharbor-sw.js', headers=headers), timeout=5) as response:
+    assert response.headers.get_content_type() == 'application/javascript'
+    assert response.headers['Cache-Control'] == 'no-cache'
+    assert b'event.respondWith' in response.read()
+print('Browser authentication, notifications and PWA resources passed')
 PY
 docker exec -i "$container" python3 - <<'PY'
 import hashlib, json, subprocess

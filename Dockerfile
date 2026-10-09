@@ -57,6 +57,7 @@ RUN test -f /defaults/default.conf \
         /usr/share/selkies/selkies-dashboard/index.html \
     && cp /usr/share/selkies/selkies-dashboard/browser-notifications.js \
         /usr/share/selkies/web/browser-notifications.js \
+    && python3 /scripts/weharbor/install-web.py \
     && chmod 0755 \
         /etc/s6-overlay/s6-rc.d/svc-app-switcher/run \
         /etc/s6-overlay/s6-rc.d/svc-polkitd/run \
@@ -65,7 +66,8 @@ RUN test -f /defaults/default.conf \
         /scripts/weflow/*.sh /scripts/weharbor/* \
         /usr/local/bin/stalonetray /usr/local/bin/weharbor-health
 
-ENV TITLE="WeHarbor · 微港" \
+ENV TITLE="WeHarbor｜微港" \
+    SELKIES_UI_TITLE="WeHarbor｜微港" \
     AUTO_START_WECHAT="true" \
     AUTO_START_QQ="false" \
     AUTO_START_WEFLOW="true" \

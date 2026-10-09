@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "WeHarbor｜微港",
+  "short_name": "WeHarbor",
+  "description": "微信桌面与 WeFlow 数据服务",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101c2d",
+  "theme_color": "#101c2d",
+  "icons": [
+    {"src": "pwa-icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "pwa-icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "pwa-icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
