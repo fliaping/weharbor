@@ -60,6 +60,7 @@ RUN test -f /defaults/default.conf \
             /usr/share/selkies/web/browser-notifications.js; \
     fi \
     && python3 /scripts/weharbor/install-web.py \
+    && ln -sfn /scripts/weharbor/wechat-launch.py /usr/bin/wechat \
     && chmod 0755 \
         /etc/s6-overlay/s6-rc.d/svc-app-switcher/run \
         /etc/s6-overlay/s6-rc.d/svc-polkitd/run \

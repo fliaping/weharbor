@@ -83,6 +83,21 @@ assert Path('/config/Documents/xwechat_files').is_symlink()
 subprocess.run(['pgrep', '-f', '^python3 /scripts/weharbor/window-layout.py$'],
                check=True, stdout=subprocess.DEVNULL)
 subprocess.run(['dpkg', '--verify', 'wechat'], check=True)
+assert Path('/usr/bin/wechat').resolve() == Path('/scripts/weharbor/wechat-launch.py')
+clients = []
+for executable in Path('/proc').glob('[0-9]*/exe'):
+    try:
+        if executable.resolve() == Path('/opt/wechat/wechat'):
+            env = dict(item.split(b'=', 1) for item in
+                       (executable.parent / 'environ').read_bytes().split(b'\0') if b'=' in item)
+            assert float(env[b'QT_FONT_DPI']) > 0
+            clients.append(executable.parent.name)
+    except (FileNotFoundError, PermissionError):
+        continue
+assert clients, 'WeChat did not start through the DPI compatibility launcher'
+setting = Path('/config/.config/weharbor/wechat-dpi')
+setting.parent.mkdir(parents=True, exist_ok=True)
+setting.write_text('144\n')
 print('Pinned versions, original ASAR and data-path compatibility passed')
 PY
 docker restart "$container" >/dev/null
@@ -105,6 +120,18 @@ wechat = [r for r in rules if r.get('class') == 'wechat'][-1]
 assert wechat.find('{*}maximized').text == 'no'
 weflow = [r for r in rules if r.get('class') == 'weflow' and r.get('title') == 'WeFlow'][-1]
 assert weflow.find('{*}iconic').text == 'yes'
+assert Path('/config/.config/weharbor/wechat-dpi').read_text().strip() == '144'
+clients = []
+for executable in Path('/proc').glob('[0-9]*/exe'):
+    try:
+        if executable.resolve() == Path('/opt/wechat/wechat'):
+            env = dict(item.split(b'=', 1) for item in
+                       (executable.parent / 'environ').read_bytes().split(b'\0') if b'=' in item)
+            assert env[b'QT_FONT_DPI'] == b'144', 'Persisted WeChat DPI was not applied'
+            clients.append(executable.parent.name)
+    except (FileNotFoundError, PermissionError):
+        continue
+assert clients, 'WeChat did not restart'
 print('Window helper, main-only maximize defaults and repeatable restart passed')
 PY
 printf '%s\n' 'WeHarbor fresh-profile smoke test passed, including restart'

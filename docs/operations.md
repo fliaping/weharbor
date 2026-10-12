@@ -65,6 +65,19 @@ WeFlow 主窗口默认最小化，微信先获得焦点。登录后只最大化�
 WeHarbor window defaults: begin / end 之间的规则，重新加载 Openbox。
 日志位于 /config/.local/log/weharbor-window-layout.log。
 
+## 微信退出后的缩放兼容
+
+部分 Linux 微信版本在桌面 DPI 改变后，退出登录时可能出现登录页绘制不完整、
+花屏或按钮点击区域错位。WeHarbor 的启动器为微信固定本次进程的 Qt 逻辑 DPI，
+默认采用启动时的桌面 DPI；不会修改微信原始二进制文件或自动重启已登录的客户端。
+浏览器修改桌面缩放后，需要重启微信才会采用新的比例，窗口分辨率仍可自动适配。
+这是兼容措施，完整登录与退出流程仍需用实际账号验证。
+
+可在 /config/.config/weharbor/wechat-dpi 写入固定值（如 192 表示 200%），
+容器重启和镜像更新会保留该设置。写入 auto 恢复启动时读取桌面 DPI；
+写入 off 关闭此兼容措施。设置在下次启动微信时生效。
+容器环境变量 WECHAT_FIXED_DPI 优先于此文件；已有 QT_FONT_DPI 设置保持不变。
+
 ## 源码构建
 
 versions.lock.json 记录准确版本、平台、基础镜像 digest 和安装包校验值。
