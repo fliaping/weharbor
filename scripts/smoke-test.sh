@@ -35,7 +35,7 @@ if [[ "$ready" != true ]]; then
 fi
 export SMOKE_URL="http://$(docker port "$container" 3000/tcp | head -n 1)"
 python3 - <<'PY'
-import base64, json, os, struct, urllib.error, urllib.request
+import base64, json, os, struct, time, urllib.error, urllib.request
 url = os.environ['SMOKE_URL'] + '/'
 try:
     urllib.request.urlopen(url, timeout=5)
@@ -90,6 +90,43 @@ for app in ['wechat', 'weflow']:
                      'X-WeHarbor-Action': 'restart'}), timeout=30) as response:
         assert json.load(response)['running']
 print('Authenticated application restarts and cross-origin protection passed')
+def app_status():
+    with urllib.request.urlopen(urllib.request.Request(url + 'notifications/apps', headers=headers), timeout=5) as response:
+        return json.load(response)
+for app in ['weflow', 'wechat']:
+    for attempt in range(60):
+        if app_status()[app]['windows']:
+            break
+        time.sleep(.5)
+    else:
+        raise SystemExit('Application did not create a selectable window: ' + app)
+    switch_headers = {**headers, 'Content-Type': 'application/json', 'X-WeHarbor-Action': 'switch'}
+    switch_url = url + f'notifications/apps/{app}/switch'
+    try:
+        urllib.request.urlopen(urllib.request.Request(switch_url, data=b'{}',
+            headers={**switch_headers, 'Origin': 'https://evil.example'}), timeout=5)
+    except urllib.error.HTTPError as error:
+        assert error.code == 403
+    else:
+        raise SystemExit('Switch accepted cross-origin request')
+    with urllib.request.urlopen(urllib.request.Request(switch_url, data=b'{}', headers=switch_headers), timeout=10) as response:
+        assert json.load(response)['windowId']
+    other = 'wechat' if app == 'weflow' else 'weflow'
+    for attempt in range(30):
+        state = app_status()
+        if state[app]['active'] and all(w['minimized'] for w in state[other]['windows']):
+            break
+        time.sleep(.2)
+    else:
+        raise SystemExit('Window focus/minimize did not settle: ' + app)
+    try:
+        urllib.request.urlopen(urllib.request.Request(switch_url,
+            data=b'{"windowId": 4294967295}', headers=switch_headers), timeout=5)
+    except urllib.error.HTTPError as error:
+        assert error.code == 404
+    else:
+        raise SystemExit('Switch accepted an unowned window')
+print('Web application switching, ownership and minimize behavior passed')
 PY
 docker exec -i "$container" python3 - <<'PY'
 import hashlib, json, subprocess

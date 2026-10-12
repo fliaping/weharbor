@@ -3,7 +3,7 @@ import signal
 import threading
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location(
@@ -13,6 +13,27 @@ spec.loader.exec_module(control)
 
 
 class AppControlTests(unittest.TestCase):
+    def test_switch_during_window_startup_does_not_launch_duplicate(self):
+        manager = control.AppController()
+        manager.windows = Mock()
+        manager.windows.activate.return_value = None
+        with patch.object(control.os, 'getuid', return_value=1000), \
+                patch.object(manager, 'processes', return_value={41: ('time', True)}), \
+                patch.object(manager, 'launch') as launch:
+            manager.switch('wechat')
+            launch.assert_not_called()
+
+    def test_switch_stopped_app_launches_and_releases_lock(self):
+        manager = control.AppController()
+        manager.windows = Mock()
+        manager.windows.activate.return_value = None
+        with patch.object(control.os, 'getuid', return_value=1000), \
+                patch.object(manager, 'processes', return_value={}), \
+                patch.object(manager, 'launch') as launch:
+            manager.switch('weflow')
+            launch.assert_called_once_with('weflow')
+        self.assertFalse(manager.locks['weflow'].locked())
+
     def test_restart_requires_same_origin_json_custom_header(self):
         headers = {'X-WeHarbor-Action': 'restart', 'Origin': 'https://desktop.example:7555'}
         self.assertTrue(control.permitted_request(headers, 'desktop.example:7555', 'application/json'))

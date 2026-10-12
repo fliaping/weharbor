@@ -102,6 +102,10 @@ class NotificationRelay:
         settings["available"] = env_enabled(
             "ENABLE_BROWSER_NOTIFICATIONS", True
         )
+        settings["appSwitcherEnabled"] = (
+            env_enabled("ENABLE_APP_SWITCHER", True)
+            and os.environ.get("APP_SWITCHER_MODE", "web") != "desktop"
+        )
         return web.json_response(settings)
 
     async def health(self, _request):

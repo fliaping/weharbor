@@ -28,7 +28,7 @@ ghcr.io/fliaping/weharbor:sha-06cb008 已通过首次启动与重启测试。
 ## 能力
 
 - 在浏览器里使用官方 Linux 微信与 WeFlow，支持上游的中文输入和剪贴板。
-- 悬浮窗口切换器，在微信和 WeFlow 间切换，并管理系统托盘。
+- 网页贴边应用条，可拖动、切换微信和 WeFlow、选择窗口、重启应用及管理通知。
 - WeFlow 默认最小化，微信默认获得焦点；登录后只自动最大化微信主窗口一次。
   后续打开的聊天、设置等子窗口保持自己的尺寸，手动还原主窗口后不会被再次最大化。
 - 将聊天推送与桌面通知转发为浏览器原生通知。
@@ -149,7 +149,8 @@ npx --yes skills add https://github.com/fliaping/weharbor --skill weflow-api --y
 | API_BIND_ADDRESS | 127.0.0.1 | API 绑定地址 |
 | WEFLOW_API_PORT | 5031 | 须与 WeFlow 设置一致 |
 | PUID / PGID | init.sh 检测 | 持久化文件所属用户 |
-| ENABLE_APP_SWITCHER | true | 悬浮切换器 |
+| ENABLE_APP_SWITCHER | true | 应用切换入口 |
+| APP_SWITCHER_MODE | web | 网页贴边应用条；desktop 恢复旧桌面切换器 |
 | ENABLE_WINDOW_DEFAULTS | true | 初始窗口布局；关闭后保留自定义窗口行为 |
 | ENABLE_BROWSER_NOTIFICATIONS | true | 浏览器通知 |
 

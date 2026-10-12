@@ -28,13 +28,16 @@ def main():
         subprocess.run(['pgrep', '-x', 'weflow'], check=True, stdout=subprocess.DEVNULL)
     if enabled('AUTO_START_WECHAT'):
         subprocess.run(['pgrep', '-x', 'wechat'], check=True, stdout=subprocess.DEVNULL)
-    if enabled('ENABLE_APP_SWITCHER'):
+    if enabled('ENABLE_APP_SWITCHER') and os.environ.get('APP_SWITCHER_MODE', 'web') == 'desktop':
         subprocess.run(['pgrep', '-f', '/scripts/app-switcher/app-switcher.py'],
                        check=True, stdout=subprocess.DEVNULL)
-    if enabled('ENABLE_BROWSER_NOTIFICATIONS'):
-        status = json.loads(get('http://127.0.0.1:8765/health'))
-        if status.get('status') != 'ok':
-            raise ValueError('Notification bridge is not healthy')
+    status = json.loads(get('http://127.0.0.1:8765/health'))
+    if status.get('status') != 'ok':
+        raise ValueError('Application/notification bridge is not healthy')
+    if enabled('ENABLE_APP_SWITCHER'):
+        apps = json.loads(get('http://127.0.0.1:8765/apps'))
+        if not all(name in apps for name in ('wechat', 'weflow')):
+            raise ValueError('Application controls are not healthy')
     # The API is optional on first launch. If explicitly enabled, check it too.
     config_path = Path('/config/.config/weflow/WeFlow-config.json')
     if enabled('AUTO_START_WEFLOW') and config_path.exists():

@@ -28,8 +28,10 @@ the default loopback binding usable:
 ssh -N -L 3001:127.0.0.1:3001 user@your-docker-host
 ~~~
 
-Open the same URL on the computer running that tunnel. Use the floating app
-switcher to select WeChat. Scan its QR code with your phone, confirm login,
+Open the same URL on the computer running that tunnel. Use the small web dock
+at the right edge to select WeChat. Drag it to either edge to reposition it.
+Expand an application's window list to select a specific window.
+Scan its QR code with your phone, confirm login,
 and wait for conversations and recent messages to appear. Open a conversation
 to confirm text is available. This first login creates the local account data.
 

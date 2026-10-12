@@ -75,6 +75,7 @@ ENV TITLE="WeHarbor｜微港" \
     AUTO_START_QQ="false" \
     AUTO_START_WEFLOW="true" \
     ENABLE_APP_SWITCHER="true" \
+    APP_SWITCHER_MODE="web" \
     ENABLE_WINDOW_DEFAULTS="true" \
     ENABLE_BROWSER_NOTIFICATIONS="true"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \

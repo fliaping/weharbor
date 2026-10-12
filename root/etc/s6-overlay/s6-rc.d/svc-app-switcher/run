@@ -1,6 +1,6 @@
 #!/usr/bin/with-contenv bash
 
-if [[ "${ENABLE_APP_SWITCHER:-true}" != "true" ]]; then
+if [[ "${ENABLE_APP_SWITCHER:-true}" != "true" || "${APP_SWITCHER_MODE:-web}" != "desktop" ]]; then
     exec sleep infinity
 fi
 
