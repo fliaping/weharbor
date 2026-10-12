@@ -61,6 +61,7 @@ class PwaTests(unittest.TestCase):
                 html = (dashboard / 'index.html').read_text()
                 self.assertEqual(html.count('rel="manifest"'), 1)
                 self.assertEqual(html.count('weharbor-pwa.js'), 1)
+                self.assertEqual(html.count('weharbor-apps.js'), 1)
                 self.assertIn('<title>WeHarbor｜微港</title>', html)
                 self.assertEqual((dashboard / 'pwa-icons').stat().st_mode & 0o777, 0o755)
                 self.assertEqual((dashboard / 'pwa-icons/icon-512.png').stat().st_mode & 0o777, 0o644)

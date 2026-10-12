@@ -5,10 +5,7 @@ if ! pgrep -x dunst >/dev/null 2>&1; then
     sleep 0.25
 fi
 
-if [ "${ENABLE_BROWSER_NOTIFICATIONS:-true}" != "true" ]; then
-    exit 0
-fi
-
+# The HTTP bridge also serves application controls when notifications are off.
 if pgrep -f "/scripts/notifications/browser-notification-bridge.py" \
     >/dev/null 2>&1; then
     exit 0

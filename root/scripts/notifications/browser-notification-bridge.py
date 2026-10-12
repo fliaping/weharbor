@@ -20,6 +20,7 @@ from gi.repository import GLib
 from aiohttp import ClientError, ClientSession, ClientTimeout, web
 
 from notification_config import ensure_settings, load_settings
+from app_control import register_routes
 
 
 LOGGER = logging.getLogger("browser-notification-bridge")
@@ -507,6 +508,7 @@ class FreedesktopNotificationMonitor:
 async def serve_http(relay, ready):
     relay.attach_loop(asyncio.get_running_loop())
     application = web.Application()
+    register_routes(application)
     application.router.add_get("/events", relay.events)
     application.router.add_get("/config", relay.config)
     application.router.add_get("/health", relay.health)

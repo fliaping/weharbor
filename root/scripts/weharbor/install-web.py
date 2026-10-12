@@ -11,6 +11,7 @@ TITLE = 'WeHarbor｜微港'
 
 def install(selkies, assets, nginx):
     revision = hashlib.sha256((assets / 'weharbor-pwa.js').read_bytes()).hexdigest()[:12]
+    apps_revision = hashlib.sha256((assets / 'weharbor-apps.js').read_bytes()).hexdigest()[:12]
     installed = 0
     for name in ['selkies-dashboard', 'selkies-dashboard-wish', 'web']:
         dashboard = selkies / name
@@ -31,12 +32,14 @@ def install(selkies, assets, nginx):
         html = re.sub(r'<link\b[^>]*rel=["\'](?:manifest|apple-touch-icon)["\'][^>]*>', '', html, flags=re.I)
         html = re.sub(r'<meta\b[^>]*name=["\'](?:theme-color|apple-mobile-web-app-title)["\'][^>]*>', '', html, flags=re.I)
         html = re.sub(r'<script\b[^>]*src=["\'][^"\']*weharbor-pwa\.js[^"\']*["\'][^>]*>\s*</script>', '', html, flags=re.I)
+        html = re.sub(r'<script\b[^>]*src=["\'][^"\']*weharbor-apps\.js[^"\']*["\'][^>]*>\s*</script>', '', html, flags=re.I)
         tags = (f'<title>{TITLE}</title>'
                 '<link rel="manifest" href="./weharbor.webmanifest" crossorigin="use-credentials">'
                 '<meta name="theme-color" content="#101c2d">'
                 f'<meta name="apple-mobile-web-app-title" content="{TITLE}">'
                 '<link rel="apple-touch-icon" href="./pwa-icons/apple-touch-icon.png">'
-                f'<script defer src="./weharbor-pwa.js?v={revision}"></script>')
+                f'<script defer src="./weharbor-pwa.js?v={revision}"></script>'
+                f'<script defer src="./weharbor-apps.js?v={apps_revision}"></script>')
         if re.search(r'</head\s*>', html, re.I):
             html = re.sub(r'</head\s*>', lambda _: tags + '</head>', html, count=1, flags=re.I)
         else:

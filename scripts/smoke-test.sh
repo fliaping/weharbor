@@ -47,7 +47,8 @@ headers = {'Authorization': 'Basic ' + base64.b64encode(('weharbor:' + os.enviro
 with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=5) as response:
     assert response.status == 200
     assert b'browser-notifications.js' in response.read()
-for path in ['weharbor.webmanifest', 'weharbor-sw.js', 'pwa-icons/icon-512.png']:
+for path in ['weharbor.webmanifest', 'weharbor-sw.js', 'pwa-icons/icon-512.png',
+             'weharbor-apps.js', 'notifications/apps']:
     try:
         urllib.request.urlopen(url + path, timeout=5)
     except urllib.error.HTTPError as error:
@@ -70,6 +71,25 @@ with urllib.request.urlopen(urllib.request.Request(url + 'weharbor-sw.js', heade
     assert response.headers['Cache-Control'] == 'no-cache'
     assert b'event.respondWith' in response.read()
 print('Browser authentication, notifications and PWA resources passed')
+with urllib.request.urlopen(urllib.request.Request(url + 'notifications/apps', headers=headers), timeout=5) as response:
+    apps = json.load(response)
+    assert apps['wechat']['running'] and apps['weflow']['running'], apps
+for app in ['wechat', 'weflow']:
+    restart_url = url + f'notifications/apps/{app}/restart'
+    for extra in [{}, {'Content-Type': 'application/json', 'X-WeHarbor-Action': 'restart',
+                       'Origin': 'https://evil.example'}]:
+        try:
+            urllib.request.urlopen(urllib.request.Request(restart_url, data=b'{}',
+                                   headers={**headers, **extra}), timeout=5)
+        except urllib.error.HTTPError as error:
+            assert error.code == 403, error.code
+        else:
+            raise SystemExit('Restart accepted a cross-origin or unguarded request')
+    with urllib.request.urlopen(urllib.request.Request(restart_url, data=b'{}',
+            headers={**headers, 'Content-Type': 'application/json',
+                     'X-WeHarbor-Action': 'restart'}), timeout=30) as response:
+        assert json.load(response)['running']
+print('Authenticated application restarts and cross-origin protection passed')
 PY
 docker exec -i "$container" python3 - <<'PY'
 import hashlib, json, subprocess
