@@ -38,6 +38,10 @@ def main():
         apps = json.loads(get('http://127.0.0.1:8765/apps'))
         if not all(name in apps for name in ('wechat', 'weflow')):
             raise ValueError('Application controls are not healthy')
+        if os.environ.get('APP_SWITCHER_MODE', 'web') != 'desktop':
+            script = get('http://127.0.0.1:3000/weharbor-apps.js', authenticated=True)
+            if b'weharbor-apps-button' not in script:
+                raise ValueError('Web application controls are not available')
     # The API is optional on first launch. If explicitly enabled, check it too.
     config_path = Path('/config/.config/weflow/WeFlow-config.json')
     if enabled('AUTO_START_WEFLOW') and config_path.exists():
