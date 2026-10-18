@@ -12,7 +12,7 @@ docker compose logs --tail=100
 ~~~
 
 Docker 健康检查覆盖浏览器桌面、启用的客户端、窗口切换器与通知桥接器。
-首次未配置 WeFlow API 时不会因此判定故障；启用后会额外检查 API 健康。
+Alpha 的 HTTP API 未启用时不会因此判定故障；启用后 /health 会被额外检查。
 未登录微信或未设置数据库密钥时，容器仍可健康运行，等待用户完成配置。
 首次登录、数据库密钥获取顺序及常见读取问题见 [首次使用教程](first-run.md)。
 
@@ -45,17 +45,25 @@ docker compose exec weharbor weharbor-health
 
 ## 从旧集成迁移
 
-1. 记录旧容器的镜像、数据挂载源路径、用户 UID/GID 和 WeFlow API 端口。
+1. 记录旧容器的镜像、数据挂载源路径、用户 UID/GID 和 API 端口。
 2. 停止旧容器，备份完整数据目录和部署配置。
 3. 在 WeHarbor 的 .env 中把 DATA_DIR 指向该数据目录，设置原 UID/GID 和端口。
-4. 启动新容器，核对微信登录、WeFlow 数据读取与浏览器通知。
+4. 启动新容器，核对微信登录、Alpha 数据读取与浏览器通知。
 
-同一个微信数据目录不能同时由两个容器使用。迁移保留现有 WeFlow 配置，
-不会自动修改其 API Token、监听地址或推送开关。
+同一个微信数据目录不能同时由两个容器使用。
+
+### 从 WeFlow / wechat-selkies 版本升级
+
+新镜像首次启动时，init-weharbor-profile 会把引用旧脚本的
+/config/.config/openbox/autostart 与 menu.xml 替换为新默认值（原文件保留为
+*.legacy-<时间戳>），并把应用条与通知设置从 .config/weflow 复制到 .config/weharbor。
+微信登录数据保持不变；WeFlow 的配置与 Token 不会迁移，需要在 Alpha 中重新完成
+首次设置并生成新的 API Token。.env 中 WEFLOW_API_PORT 改为 API_PORT，
+AUTO_START_WEFLOW 改为 AUTO_START_ALPHA；自动登录与夜间重启相关变量已不再使用。
 
 ## 初始窗口布局
 
-WeFlow 主窗口默认最小化，微信先获得焦点。登录后只最大化当前微信进程的
+Alpha 主窗口默认最小化，微信先获得焦点。登录后只最大化当前微信进程的
 一个主窗口一次；聊天、图片、设置等后续子窗口不自动最大化。用户手动还原
 主窗口后，助手不会强制再次最大化。微信重启或重新创建主窗口后会重新识别。
 
@@ -73,7 +81,7 @@ WeHarbor window defaults: begin / end 之间的规则，重新加载 Openbox。
 选择主窗口或子窗口。切换会最小化另一应用的窗口，不改变所选窗口的大小。
 旁边的 ↻ 按钮重启对应应用，通知开关也统一放在此面板。
 重启前保存未发送的内容；重启不会清除登录数据、数据库或配置，
-WeFlow 重启时 API 会短暂不可用。此入口沿用网页登录认证，通知关闭后仍可使用。
+Alpha 重启时 API 会短暂不可用。此入口沿用网页登录认证，通知关闭后仍可使用。
 正常退出超时后才强制结束残留进程；同一应用的重启请求不会并行执行。
 
 默认 APP_SWITCHER_MODE=web，不再显示旧桌面悬浮条。设为 desktop 并重建
@@ -95,11 +103,11 @@ WeFlow 重启时 API 会短暂不可用。此入口沿用网页登录认证，�
 ## 源码构建
 
 versions.lock.json 记录准确版本、平台、基础镜像 digest 和安装包校验值。
-微信 deb 和 WeFlow tar.gz 默认从本仓库的 component-assets Release 下载，
-避免官网地址滚动更新版本。Release 附件仅包含原版安装包及校验清单，
+微信 deb 默认从本仓库的 component-assets Release 下载，Alpha deb 从
+xunchahaha/alpha-releases 的 v0.2.0 Release 下载，避免地址滚动更新版本。Release 附件仅包含原版安装包及校验清单，
 不包含部署配置、账号目录或密钥。
-离线构建可提前把两个安装包分别放在 downloads/wechat.deb 和 downloads/weflow.tar.gz。
-WECHAT_DOWNLOAD_URL / WEFLOW_DOWNLOAD_URL 可覆盖下载地址，但仍须通过锁定校验值。
+离线构建可提前把两个安装包分别放在 downloads/wechat.deb 和 downloads/alpha.deb。
+WECHAT_DOWNLOAD_URL / ALPHA_DOWNLOAD_URL 可覆盖下载地址，但仍须通过锁定校验值。
 两个下载目录中的文件均不会被提交到 Git。
 
 ~~~bash
@@ -108,7 +116,7 @@ python3 scripts/prepare-assets.py
 ./scripts/smoke-test.sh weharbor:0.1.0
 ~~~
 
-在网络需要时可设置 APT_MIRROR，例如 Ubuntu 的可信 HTTPS 镜像站地址。
+在网络需要时可设置 APT_MIRROR，例如 Debian 的可信镜像站根地址（替换 http://deb.debian.org/）。
 build.sh 接受额外 Buildx 参数；一旦显式传参，需自己提供 --tag 和 --load/--push。
 
 ## GitHub Actions 与镜像发布
@@ -127,16 +135,22 @@ image.yml 在 main 推送、PR、v* 版本标签及手动触发时运行：
 
 首次运行无需额外配置，两个安装包均使用版本锁定文件中的 Release 附件地址。
 需要镜像下载来源时，可在仓库 Settings → Secrets and variables → Actions → Variables
-设置 WEFLOW_DOWNLOAD_URL / WECHAT_DOWNLOAD_URL；手动构建也可输入 WeFlow 的可信 HTTPS URL。
+设置 ALPHA_DOWNLOAD_URL / WECHAT_DOWNLOAD_URL；手动构建也可输入 Alpha 的可信 HTTPS URL。
 下载内容必须通过 versions.lock.json 的 SHA256 校验。地址缺失或版本不匹配时
 工作流会明确失败，不会静默跳过整个镜像任务。缓存只包含 downloads 安装包，
 不包含用户配置、账号数据和凭据。
 fork 的发布地址自动跟随 github.repository，不绑定某个个人账号。
 
-准备公开镜像时，应先确认原版 WeFlow 6.3.2 及所含原生组件的分发许可，
+准备公开镜像时，应先确认 Alpha 0.2.0（闭源、许可未声明）及所含组件的分发许可，
 保留微信与全部第三方声明，再补充稳定可访问的安装包来源。
 构建能成功并不等于已经确认所有二进制组件的再分发授权。
 
 源码仓库：[fliaping/weharbor](https://github.com/fliaping/weharbor)。
 预构建镜像 ghcr.io/fliaping/weharbor:edge 支持匿名拉取；首次通过
 完整构建、空数据目录启动与重启测试的提交标签为 sha-06cb008。
+
+## 本机（无 systemd）运行提示
+
+在没有 systemd 的主机上，dockerd 与 tailscaled 需要手动拉起；容器使用
+restart: unless-stopped，dockerd 启动后会自动恢复。Tailscale Serve 配置保存在
+tailscaled 状态目录中，重启 tailscaled 后仍生效。

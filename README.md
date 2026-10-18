@@ -2,9 +2,9 @@
 
 把微信桌面、聊天数据 API 和实时消息通知装进一个容器。
 
-WeHarbor 是面向个人自托管的微信服务集成项目。它基于
-wechat-selkies 的精简镜像，把官方 Linux 微信和 WeFlow 放在同一个
-浏览器桌面里，提供窗口切换、浏览器通知，以及 WeFlow 的 HTTP API / SSE
+WeHarbor 是面向个人自托管的微信服务集成项目。它直接基于 LinuxServer.io 的
+Selkies 2.0 基础镜像（Debian trixie），把官方 Linux 微信和 Alpha 放在同一个
+浏览器桌面里，提供窗口切换、浏览器通知，以及 Alpha 的 HTTP API / MCP / SSE
 消息推送。用户数据保存在一个 /config 卷中。
 
 [English](docs/README.en.md) · [首次使用教程](docs/first-run.md) · [API 接入](docs/api.md) ·
@@ -14,55 +14,34 @@ wechat-selkies 的精简镜像，把官方 Linux 微信和 WeFlow 放在同一�
 
 ## 当前状态
 
-首版源码与本地构建版本为 0.1.0，源码仓库为
-[fliaping/weharbor](https://github.com/fliaping/weharbor)。预构建镜像已发布到
-ghcr.io/fliaping/weharbor:edge，可直接匿名拉取。edge 跟随 main；固定提交标签
-ghcr.io/fliaping/weharbor:sha-06cb008 已通过首次启动与重启测试。
-当前组合：WeChat 4.1.13.23、WeFlow 6.3.2、wechat-selkies 0.0.14-minimal。
-目前仅支持 linux/amd64；不提供未经验证的 ARM64 镜像。
+源码版本 0.1.0，仓库为 [fliaping/weharbor](https://github.com/fliaping/weharbor)。
+当前组合：WeChat 4.1.13.23、Alpha 0.2.0、Selkies 2.0.0
+（ghcr.io/linuxserver/baseimage-selkies:debiantrixie，按 digest 锁定）。
+目前仅支持 linux/amd64。
 
-微信和 WeFlow 的锁定版本原版安装包保存在本仓库的 component-assets Release。
-源码构建会自动下载并验证 SHA256，无需自行寻找安装包或配置下载地址。
-也可通过 WECHAT_DOWNLOAD_URL / WEFLOW_DOWNLOAD_URL 覆盖地址，校验值保持固定。
+> 注意：从 WeFlow 切换到 Alpha 的版本尚未发布预构建镜像，请本地构建。
+> Alpha 是闭源、未签名的二进制发行版，许可证未声明；其密钥助手内置
+> 2026-11-15 的有效期，需要随上游更新。详见 [组件许可](THIRD_PARTY_NOTICES.md)。
+
+微信安装包从本仓库的 component-assets Release 下载，Alpha 安装包从
+xunchahaha/alpha-releases 的 v0.2.0 Release 下载；构建时都会校验锁定的 SHA256。
+也可通过 WECHAT_DOWNLOAD_URL / ALPHA_DOWNLOAD_URL 覆盖地址，校验值保持固定。
 
 ## 能力
 
-- 在浏览器里使用官方 Linux 微信与 WeFlow，支持上游的中文输入和剪贴板。
-- 网页贴边应用条，可拖动、切换微信和 WeFlow、选择窗口、重启应用及管理通知。
-- WeFlow 默认最小化，微信默认获得焦点；登录后只自动最大化微信主窗口一次。
-  后续打开的聊天、设置等子窗口保持自己的尺寸，手动还原主窗口后不会被再次最大化。
+- 在浏览器里使用官方 Linux 微信与 Alpha（Selkies 2.0，WebSocket 传输，支持剪贴板）。
+- 网页贴边应用条，可拖动、切换微信和 Alpha、选择窗口、重启应用及管理通知。
+- Alpha 默认最小化，微信默认获得焦点；登录后只自动最大化微信主窗口一次。
 - 将聊天推送与桌面通知转发为浏览器原生通知。
 - 支持 PWA 安装，以独立窗口从电脑桌面或手机主屏幕打开。
-- 通过 WeFlow 查询会话、消息、联系人与群成员，并订阅 SSE 消息事件。
-- 单容器、单数据卷；保留原版 WeFlow ASAR 和原生组件。
+- 通过 Alpha 查询会话、消息、联系人与群成员，订阅 SSE 消息事件，或接入 MCP。
+- 单容器、单数据卷；微信和 Alpha 均以原版 deb 安装，不修改应用文件。
 
-首次使用仍需要手机扫码登录微信，并在 WeFlow 中完成账号与数据库配置。
-这里提供的数据 API 不承诺自动发送微信消息或实现机器人协议。
-
-## 使用预构建镜像
-
-需要 Linux amd64 主机、Docker Engine 和 Compose v2。先获取配置并初始化：
-
-~~~bash
-git clone https://github.com/fliaping/weharbor.git
-cd weharbor
-./scripts/init.sh
-~~~
-
-把 .env 中的 WEHARBOR_IMAGE 设置为 ghcr.io/fliaping/weharbor:edge，然后启动：
-
-~~~bash
-docker compose pull
-docker compose up -d
-~~~
-
-打开 https://localhost:3001，使用 .env 中生成的网页登录凭据。
-首次登录、数据库与 API 配置见 [首次使用教程](docs/first-run.md)。
+首次使用仍需要手机扫码登录微信，并在 Alpha 向导中完成账号与密钥配置。
 
 ## 本地构建与启动
 
-需要 Linux amd64 主机、Docker Engine、Compose v2 / Buildx 和 Python 3.10+。
-获取源码后，在仓库目录执行：
+需要 Linux amd64 主机、Docker Engine、Compose v2 / Buildx 和 Python 3.10+：
 
 ~~~bash
 git clone https://github.com/fliaping/weharbor.git
@@ -72,70 +51,48 @@ cd weharbor
 docker compose up -d
 ~~~
 
-也可运行 ./scripts/quickstart.sh，自动准备安装包、初始化、构建缺失的
-本地镜像并启动。配置预构建镜像地址后，同一入口会拉取镜像再启动。
-
-build.sh 会从本仓库的 component-assets Release 下载锁定版本的两个安装包。
-也可提前把 WeFlow-6.3.2-Setup.tar.gz 放到 downloads/weflow.tar.gz，
-把 WeChatLinux_4.1.13.23_amd64.deb 放到 downloads/wechat.deb。
-Release 中仅保存校验通过的原版安装包；下载到其他版本时构建会明确失败。
+build.sh 会下载并校验两个锁定版本的安装包。离线构建可提前把
+Alpha-0.2.0-x64.deb 放到 downloads/alpha.deb，把
+WeChatLinux_4.1.13.23_amd64.deb 放到 downloads/wechat.deb。
 
 打开 https://localhost:3001，使用 .env 中的 CUSTOM_USER 和 PASSWORD 登录。
 首次 HTTPS 使用自签名证书。init.sh 会生成随机网页登录密码，并自动设置
 宿主用户 UID/GID；已有 .env 不会被覆盖。不要把 .env 提交到 Git。
 
 默认只绑定本机地址。需要从其他机器访问时，在 .env 设置
-BIND_ADDRESS=0.0.0.0，再运行 docker compose up -d。
-通过正式域名访问时，用支持 WebSocket / SSE 的 HTTPS 反向代理转发桌面端口。
-
-使用可信 HTTPS 域名打开后，可点击“安装 WeHarbor”安装为桌面应用。
-iPhone / iPad 使用 Safari 的“添加到主屏幕”。局域网 HTTP IP 与不可信的
-自签名证书可能无法安装；详见 [PWA 安装说明](docs/pwa.md)。
-
-已有部署切换到预构建镜像时，把 .env 的 WEHARBOR_IMAGE 改成上面的镜像地址，然后：
-
-~~~bash
-docker compose pull
-docker compose up -d
-~~~
+BIND_ADDRESS=0.0.0.0，或使用 Tailscale Serve / 支持 WebSocket 的 HTTPS 反向代理
+转发 3001 端口。不建议直接暴露到公网。
 
 ## 首次设置
 
-第一次使用请按 [完整教程](docs/first-run.md) 操作，每一步都有完成标志和排障说明。
+按 [完整教程](docs/first-run.md) 操作：
 
-1. 先扫码登录微信，等待本地账号与聊天数据库生成。
-2. 在 WeFlow 向导中自动检测数据库目录，通常为
-   /config/Documents/xwechat_files（兼容链接指向 /config/xwechat_files）。
-3. 获取密钥前退出微信登录、关闭自动登录；点击“自动获取密钥”，
-   等 WeFlow 准备完成后再在手机上确认登录。Linux 流程会重启微信。
-4. 完成配置，在 WeFlow 中打开一个会话并确认可以读到消息。图片密钥可另行配置。
-5. 启用 HTTP API，使用 0.0.0.0 和 .env 中的 WEFLOW_API_PORT（默认 5031），
-   生成 API Token；先查会话和消息验证读取，再安装 AI skill。
+1. 扫码登录微信，等待本地账号与聊天数据库生成。
+2. 在 Alpha 首次设置向导中勾选“我已了解”，点击“连接微信”，选择账号与数据目录
+   （/config/Documents/xwechat_files，兼容链接指向 /config/xwechat_files）。
+3. 按向导获取数据库密钥（可选获取图片密钥），完成设置后确认能看到聊天记录。
+4. 在 Alpha 设置中启用 HTTP API（端口 5031），复制访问 Token；
+   需要实时通知时同时开启主动推送。
 
-需要实时通知时再开启 WeFlow 的主动推送，并在浏览器桌面点击“启用消息通知”。
-容器健康、API health 正常和 skill 安装成功，均不代表账号数据库已经可读。
+Alpha 的 API 只监听容器内 127.0.0.1:5031；容器内 nginx 在 5032 端口转发，
+Compose 默认映射到宿主机 127.0.0.1:${API_PORT:-5031}。所有请求（/health 除外）
+仍需 Alpha 的 Bearer Token；带浏览器 Origin 头的请求会被拒绝。
 
-浏览器通知需要 HTTPS 或 localhost，并且桌面页面保持打开。
-WeFlow 的 API Token 与网页登录密码分开管理。API 默认仅映射到宿主机回环地址。
+浏览器消息通知需要把 Alpha Token 保存到 /config/.config/weharbor/alpha-api-token
+（权限 600），或设置 ALPHA_API_TOKEN 环境变量，因为 Alpha 把 Token 加密保存在
+密钥环中，通知桥无法直接读取。
 
 ## 接入 AI 工具
 
-仓库提供可安装的 weflow-api skill，附带无需 pip 依赖的 Python 调用脚本。
-把下面的 URL 交给支持 Agent Skills、能执行命令的 AI 工具，并说
-“请安装这个 skill，并帮我检查连接配置”：
-
-https://raw.githubusercontent.com/fliaping/weharbor/main/docs/install-skill.md
-
-也可在 AI 项目目录直接执行：
+仓库提供 alpha-api skill，附带无需 pip 依赖的 Python 调用脚本：
 
 ~~~bash
-npx --yes skills add https://github.com/fliaping/weharbor --skill weflow-api --yes
+npx --yes skills add https://github.com/fliaping/weharbor --skill alpha-api --yes
 ~~~
 
-使用者自行在 AI 执行环境配置 WEFLOW_API_BASE 与 WEFLOW_API_TOKEN，
-或通过 WEFLOW_API_TOKEN_FILE 读取本地凭据文件。skill 支持聊天查询、群聊摘要、
-联系人、群成员和限时 SSE 订阅；Token 不需要提交到仓库或发送到聊天中。
-详细安装、联网与版本兼容说明见 [安装页](docs/install-skill.md)。
+在 AI 执行环境配置 ALPHA_API_BASE 与 ALPHA_API_TOKEN（或 ALPHA_API_TOKEN_FILE）。
+客户端最初为 WeFlow API 编写；Alpha 的路由名称一致，但参数与返回字段仍待在真实
+实例上核对。详见 [安装页](docs/install-skill.md)。
 
 ## 配置
 
@@ -143,20 +100,23 @@ npx --yes skills add https://github.com/fliaping/weharbor --skill weflow-api --y
 | --- | --- | --- |
 | WEHARBOR_IMAGE | weharbor:0.1.0 | 镜像地址与版本 |
 | DATA_DIR | ./data | 持久化数据目录 |
-| CUSTOM_USER / PASSWORD | 自动生成 | 浏览器桌面登录 |
+| CUSTOM_USER / PASSWORD | 自动生成 | 浏览器桌面登录（nginx Basic Auth） |
 | BIND_ADDRESS | 127.0.0.1 | 桌面端口绑定地址 |
 | HTTP_PORT / HTTPS_PORT | 3000 / 3001 | 桌面入口 |
-| API_BIND_ADDRESS | 127.0.0.1 | API 绑定地址 |
-| WEFLOW_API_PORT | 5031 | 须与 WeFlow 设置一致 |
+| API_BIND_ADDRESS / API_PORT | 127.0.0.1 / 5031 | 宿主机上的 Alpha API 地址（映射到容器 5032） |
+| AUTO_START_WECHAT / AUTO_START_ALPHA | true | 自动启动应用 |
 | PUID / PGID | init.sh 检测 | 持久化文件所属用户 |
 | ENABLE_APP_SWITCHER | true | 应用切换入口 |
 | APP_SWITCHER_MODE | web | 网页贴边应用条；desktop 恢复旧桌面切换器 |
-| ENABLE_WINDOW_DEFAULTS | true | 初始窗口布局；关闭后保留自定义窗口行为 |
+| ENABLE_WINDOW_DEFAULTS | true | 初始窗口布局 |
 | ENABLE_BROWSER_NOTIFICATIONS | true | 浏览器通知 |
 
 GPU 加速可选：宿主机存在 /dev/dri 时运行
 docker compose -f compose.yaml -f compose.gpu.yaml up -d。
-普通部署不需要 GPU、宿主网络或特权容器；SYS_PTRACE 用于 WeFlow 的进程密钥助手。
+SYS_PTRACE 供 Alpha 读取微信进程内存以获取数据库密钥。
+
+与 wechat-selkies 时期相比，微信自动点击登录与夜间定时重启已移除；
+容器内暂未预装中文输入法。
 
 ## 开发与贡献
 
@@ -167,20 +127,13 @@ python3 scripts/check.py
 ~~~
 
 版本、安装包 SHA256 与基础镜像 digest 集中在 versions.lock.json。
-构建过程不修改 WeFlow 应用文件。root/ 只保存本项目的集成层；上游桌面与微信
-启动脚本继续从基础镜像复用。
-
-GitHub Actions 在 main 推送、PR、版本标签和手动触发时构建并测试镜像。
-main 的测试通过后发布 GHCR 的 edge / sha 标签，版本标签发布固定版本 / latest。
-安装包默认从固定 Release 下载并校验，无需配置额外 Actions 变量。
-部署与发布说明见 docs/operations.md。
+root/ 只保存本项目的集成层（启动脚本、窗口布局、通知桥、API 代理、旧配置迁移）。
 
 ## 许可与致谢
 
-WeHarbor 的集成代码使用 MIT 许可证。微信、WeFlow、Selkies 及其他组件保留
-各自许可；本仓库的 MIT 不会改变这些组件的使用和分发条件。
-WeFlow 已公开的源码许可含非商业限制，所用 6.3.2 二进制及原生组件的授权
-还需在公开镜像发布前核实。详见 THIRD_PARTY_NOTICES.md。
+WeHarbor 的集成代码使用 MIT 许可证。微信、Alpha、Selkies 及其他组件保留
+各自许可；Alpha 的分发条款未明确，公开发布组合镜像前需先核实。
+详见 THIRD_PARTY_NOTICES.md。
 
-感谢 wechat-selkies、LinuxServer.io、Selkies 和 WeFlow 的维护者。
-WeHarbor 是独立的社区集成项目。
+感谢 LinuxServer.io、Selkies、wechat-selkies 与 WeFlow 项目的维护者，
+以及 Alpha 的作者。WeHarbor 是独立的社区集成项目。

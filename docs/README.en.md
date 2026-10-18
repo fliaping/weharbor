@@ -1,43 +1,20 @@
 # WeHarbor
 
 A self-hosted WeChat desktop, local data API and message notifications in one
-container. WeHarbor combines the pinned minimal wechat-selkies image, official
-Linux WeChat and an unmodified WeFlow distribution.
+container. WeHarbor builds directly on the LinuxServer.io Selkies 2.0 base image
+(Debian trixie) and installs the official Linux WeChat and Alpha, unmodified.
 
-Version 0.1.0 currently includes WeChat 4.1.13.23 and WeFlow 6.3.2, on linux/amd64.
-Source: [fliaping/weharbor](https://github.com/fliaping/weharbor).
-The prebuilt image is available for anonymous pulls as ghcr.io/fliaping/weharbor:edge.
-The edge tag follows main; ghcr.io/fliaping/weharbor:sha-06cb008 pins the first
-build that passed fresh-profile and restart tests.
+Version 0.1.0 includes WeChat 4.1.13.23, Alpha 0.2.0 and Selkies 2.0.0
+(`ghcr.io/linuxserver/baseimage-selkies:debiantrixie`, pinned by digest), on
+linux/amd64 only. Source: [fliaping/weharbor](https://github.com/fliaping/weharbor).
 
-## Use the prebuilt image
-
-Requirements: Docker Engine, Compose v2 and a Linux amd64 host.
-
-~~~bash
-git clone https://github.com/fliaping/weharbor.git
-cd weharbor
-./scripts/init.sh
-~~~
-
-Set WEHARBOR_IMAGE=ghcr.io/fliaping/weharbor:edge in .env, then run:
-
-~~~bash
-docker compose pull
-docker compose up -d
-~~~
-
-Open https://localhost:3001 using the generated credentials in .env.
-Follow the [first-run guide](first-run.en.md) to configure WeChat and WeFlow.
+> The Alpha-based build has no published prebuilt image yet; build locally.
+> Alpha is a closed-source, unsigned binary with no declared license, and its
+> key helper embeds an expiry (2026-11-15) that requires upstream updates.
 
 ## Build and start
 
-Requirements: Docker Engine with Compose v2 / Buildx, Python 3.10+ and an amd64 host.
-The pinned WeFlow 6.3.2 archive and WeChat deb are downloaded automatically from
-this repository's component-assets Release. Every package must match the pinned
-SHA256. The Release contains only original installers and their checksums, with
-no user profiles or credentials. WEFLOW_DOWNLOAD_URL / WECHAT_DOWNLOAD_URL can
-override the download addresses while retaining checksum verification.
+Requirements: Docker Engine with Compose v2 / Buildx, Python 3.10+, amd64 host.
 
 ~~~bash
 git clone https://github.com/fliaping/weharbor.git
@@ -47,59 +24,42 @@ cd weharbor
 docker compose up -d
 ~~~
 
-Open https://localhost:3001 with the browser credentials stored in .env.
+The pinned WeChat deb (component-assets Release) and Alpha deb
+(xunchahaha/alpha-releases v0.2.0) are downloaded and SHA256-verified.
+WECHAT_DOWNLOAD_URL / ALPHA_DOWNLOAD_URL can override the addresses.
 
-WeFlow initially opens minimized and WeChat receives focus. After login, only
-the identified WeChat main window is maximized once. Later child windows keep
-their own size; manually restoring the main window is respected. Set
-ENABLE_WINDOW_DEFAULTS=false to disable the helper.
+Open https://localhost:3001 with CUSTOM_USER / PASSWORD from .env, then follow
+the [first-run guide](first-run.en.md): log in to WeChat, complete Alpha's setup
+wizard, and enable Alpha's HTTP API (port 5031).
 
-PWA installation is supported: open the desktop over HTTPS with a trusted
-certificate and click “安装 WeHarbor” when Chrome/Edge offers installation.
-On iPhone/iPad, use Safari's Share → Add to Home Screen. Plain HTTP on a LAN IP
-and untrusted certificates may prevent installation. Installed apps still need
-the server and network; chat data and desktop frames are never cached by the
-Service Worker. See [installation details](pwa.md).
-init.sh generates a random password and detects your UID/GID without overwriting
-existing settings. The default bind address is localhost. Set BIND_ADDRESS=0.0.0.0
-to permit access from other machines while retaining browser authentication.
+Alpha listens on 127.0.0.1:5031 inside the container and rejects foreign Host
+and Origin headers. An in-container nginx proxy on 5032 forwards to it, and
+Compose publishes that on host `${API_BIND_ADDRESS}:${API_PORT}` (default
+127.0.0.1:5031). Alpha's bearer token is still required for every route except
+/health. For browser notifications, save the token to
+/config/.config/weharbor/alpha-api-token.
 
-Follow the [first-run guide](first-run.en.md) after opening the desktop.
-First log in to create local data, then configure the database in WeFlow.
-Linux key acquisition restarts WeChat: disable automatic login, log out,
-start acquisition, and confirm login only after WeFlow is ready.
-The usual database path is /config/Documents/xwechat_files.
-Verify readable messages in WeFlow before enabling the API or installing a skill.
-Enable WeFlow's HTTP API on 0.0.0.0:5031, generate an API token, and enable its
-message push feature. Browser notifications require HTTPS or localhost and an
-open desktop page. API ports are published to host loopback by default.
+Alpha starts minimized and WeChat receives focus; only the WeChat main window
+is maximized once after login. PWA installation is supported over trusted HTTPS
+(see [pwa.md](pwa.md)). All state persists in ./data mounted at /config.
 
-All profiles, databases and settings persist in ./data, mounted at /config.
-Keep this directory and .env out of Git. Stop the container before backing it up.
-
-The image workflow builds and tests main pushes, PRs, version tags and manual
-runs. Successful main builds publish GHCR edge / sha tags; matching version tags
-publish the version / latest. No additional download variables are required.
-PRs never publish, and only the exact image that passed the smoke test is pushed.
+Compared with the former wechat-selkies/WeFlow image, WeChat auto-login clicking
+and nightly restarts were removed, and no Chinese IME is preinstalled.
+Existing profiles are migrated automatically (see [operations](operations.md)).
 
 [First-run guide](first-run.en.md) · [API usage](api.md) · [Operations](operations.md) ·
-[AI skill installation](install-skill.md) ·
-[Third-party notices](../THIRD_PARTY_NOTICES.md)
+[AI skill installation](install-skill.md) · [Third-party notices](../THIRD_PARTY_NOTICES.md)
 
-Install the bundled weflow-api Agent Skill from your AI project directory:
+Install the bundled alpha-api Agent Skill from your AI project directory:
 
 ~~~bash
-npx --yes skills add https://github.com/fliaping/weharbor --skill weflow-api --yes
+npx --yes skills add https://github.com/fliaping/weharbor --skill alpha-api --yes
 ~~~
 
-Give your AI this installation URL:
-https://raw.githubusercontent.com/fliaping/weharbor/main/docs/install-skill.md
-The client needs Python 3.10+, a reachable WEFLOW_API_BASE and a locally configured
-WEFLOW_API_TOKEN (or WEFLOW_API_TOKEN_FILE). No pip dependencies are required.
-Installation does not configure or disclose account credentials.
+Configure ALPHA_API_BASE and ALPHA_API_TOKEN (or ALPHA_API_TOKEN_FILE) locally.
+The client was written for WeFlow's API; Alpha uses the same route names, but
+parameters and response fields are not yet verified against a live instance.
 
 WeHarbor integration code is MIT licensed. Vendor components keep their own
-licenses. WeFlow's published source license includes a noncommercial condition;
-the exact 6.3.2 binary and native component redistribution terms must still be
-confirmed before publishing a combined image. The repository's MIT license does
-not apply to every component inside the image.
+licenses; Alpha's redistribution terms are unclear, so do not publish a combined
+image until they are confirmed.
