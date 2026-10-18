@@ -117,9 +117,9 @@ class WindowLayoutTests(unittest.TestCase):
         self.assertEqual(self.layout.maximize.call_count, 2)
         self.layout.maximize.assert_called_with(main)
 
-    def test_weflow_minimized_once_and_its_dialog_is_untouched(self):
-        self.windows[1] = Window(1, app='weflow', title='WeFlow')
-        self.windows[2] = Window(2, app='weflow', title='Settings')
+    def test_alpha_minimized_once_and_its_dialog_is_untouched(self):
+        self.windows[1] = Window(1, app='alpha-desktop', title='Alpha')
+        self.windows[2] = Window(2, app='alpha-desktop', title='Settings')
         self.tick(0)
         self.tick(2)
         self.assertEqual(self.layout.send.call_count, 1)
@@ -133,7 +133,7 @@ class WindowLayoutTests(unittest.TestCase):
                               '<keyboard><keybind key="A-F4"/></keyboard><applications>'
                               '<!-- user preference --><application class="*"><maximized>yes</maximized></application>'
                               '<application class="wechat" type="normal"><decor>no</decor></application>'
-                              '</applications><applications><application class="weflow" title="Settings">'
+                              '</applications><applications><application class="alpha" title="Settings">'
                               '<layer>above</layer></application></applications></openbox_config>')
             config.chmod(0o640)
             original = ET.parse(config).getroot()
@@ -150,8 +150,8 @@ class WindowLayoutTests(unittest.TestCase):
             self.assertIsNotNone(root.find('.//{*}keybind'))
             self.assertIn(b'user preference', first)
             self.assertEqual(config.stat().st_mode & 0o777, 0o640)
-            wechat, weflow = rules[-2:]
+            wechat, alpha = rules[-2:]
             self.assertEqual(wechat.get('class'), 'wechat')
             self.assertEqual(wechat.find('{*}maximized').text, 'no')
-            self.assertEqual(weflow.attrib, {'class': 'weflow', 'title': 'WeFlow', 'type': 'normal'})
-            self.assertEqual(weflow.find('{*}iconic').text, 'yes')
+            self.assertEqual(alpha.attrib, {'class': 'alpha-desktop', 'title': 'Alpha', 'type': 'normal'})
+            self.assertEqual(alpha.find('{*}iconic').text, 'yes')

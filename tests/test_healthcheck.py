@@ -22,9 +22,9 @@ class HealthcheckTests(unittest.TestCase):
             if url.endswith('/health'):
                 return b'{"status":"ok"}'
             if url.endswith('/apps'):
-                return b'{"wechat":{},"weflow":{}}'
+                return b'{"wechat":{},"alpha":{}}'
             return b'<html></html>'
-        with patch.dict(os.environ, {'AUTO_START_WECHAT': 'false', 'AUTO_START_WEFLOW': 'false',
+        with patch.dict(os.environ, {'AUTO_START_WECHAT': 'false', 'AUTO_START_ALPHA': 'false',
                                      'ENABLE_APP_SWITCHER': enabled, 'APP_SWITCHER_MODE': mode}, clear=True), \
                 patch.object(health, 'get', side_effect=get) as mock_get, \
                 patch.object(health.subprocess, 'run'):

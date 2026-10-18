@@ -1,0 +1,39 @@
+#!/usr/bin/with-contenv bash
+# Migrate desktop profiles created by the former wechat-selkies/WeFlow image.
+# init-selkies-config copies /defaults only when a file is missing, so legacy
+# autostart and menu entries would otherwise keep calling removed scripts.
+conf="${HOME:-/config}/.config/openbox"
+stamp="$(date +%Y%m%d%H%M%S)"
+for name in autostart menu.xml; do
+    file="${conf}/${name}"
+    if [ -f "${file}" ] && grep -qE '/scripts/(start\.sh|weflow/)' "${file}"; then
+        cp -p "${file}" "${file}.legacy-${stamp}"
+        cp "/defaults/${name}" "${file}"
+        chown abc:abc "${file}" "${file}.legacy-${stamp}"
+        echo "[weharbor] migrated legacy ${file}"
+    fi
+done
+# Settings moved out of the WeFlow-specific directory.
+old="${HOME:-/config}/.config/weflow"
+new="${HOME:-/config}/.config/weharbor"
+if [ -d "${old}" ]; then
+    mkdir -p "${new}"
+    for name in browser-notifications.json app-switcher-position app-switcher-settings.json; do
+        if [ -f "${old}/${name}" ] && [ ! -e "${new}/${name}" ]; then
+            cp -p "${old}/${name}" "${new}/${name}"
+        fi
+    done
+    chown -R abc:abc "${new}"
+fi
+
+# Alpha's HTTP API only binds 127.0.0.1 and rejects foreign Host/Origin
+# headers. nginx re-publishes it on ALPHA_API_PROXY_PORT; Alpha's own bearer
+# token still authenticates every request except /health.
+api_port="${ALPHA_API_PORT:-5031}"
+proxy_port="${ALPHA_API_PROXY_PORT:-5032}"
+if ! [[ "${api_port}" =~ ^[0-9]+$ && "${proxy_port}" =~ ^[0-9]+$ ]] || [ "${api_port}" = "${proxy_port}" ]; then
+    echo "[weharbor] invalid ALPHA_API_PORT/ALPHA_API_PROXY_PORT" >&2
+    exit 1
+fi
+sed -i -e "s/ALPHA_API_PROXY_PORT/${proxy_port}/g" -e "s/ALPHA_API_PORT/${api_port}/g" \
+    /etc/nginx/sites-available/default

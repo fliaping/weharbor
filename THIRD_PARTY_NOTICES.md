@@ -5,20 +5,14 @@ It does not relicense vendor applications, base-image packages or native librari
 
 | Component | Source / origin | License and handling |
 | --- | --- | --- |
-| wechat-selkies | https://github.com/nickrunning/wechat-selkies | MIT; pinned minimal base image. The original notice is in licenses/wechat-selkies.MIT.txt. |
-| LinuxServer.io / Selkies | Dependencies provided by the pinned base image | Their upstream licenses and installed package notices remain applicable. |
-| Official Linux WeChat | https://linux.weixin.qq.com/ | Proprietary vendor distribution. The original deb is mirrored in the component-assets Release with its pinned SHA256; its application and package files remain unchanged. Verify redistribution terms before publishing a combined image. |
-| WeFlow | https://github.com/hicccc77/WeFlow | The original 6.3.2 archive is mirrored in the component-assets Release with its pinned SHA256. Published source carries CC BY-NC-SA 4.0. A reference license is retained in licenses/WeFlow.CC-BY-NC-SA-4.0.txt. Exact 6.3.2 binary/native redistribution terms remain unverified. |
-| Electron / Chromium / WeFlow native libraries | Included in the original WeFlow archive | Original files and embedded notices are retained unchanged under /opt/weflow. |
+| LinuxServer.io baseimage-selkies | https://github.com/linuxserver/docker-baseimage-selkies | Pinned `debiantrixie` image digest. GPL-3.0 (LinuxServer.io); bundled Debian packages keep their own notices. |
+| Selkies 2.0.0 | https://github.com/selkies-project/selkies | Provided by the base image. Mozilla Public License 2.0. |
+| Official Linux WeChat | https://linux.weixin.qq.com/ | Proprietary vendor distribution. The original deb is mirrored in the component-assets Release with its pinned SHA256; it is installed unmodified with dpkg. Verify redistribution terms before publishing a combined image. |
+| Alpha 0.2.0 | https://github.com/xunchahaha/alpha-releases | Closed-source, unsigned binary release; the deb control file declares `License: unknown`. Installed unmodified from the pinned SHA256. Redistribution terms are unverified: do not publish a combined image until they are clarified. Bundled Electron/Chromium/ffmpeg notices remain under /opt/Alpha. |
 
-The WeFlow reference license was retained from a previously provided upstream
-distribution. It documents the published source license and is not evidence that
-every component of the 6.3.2 binary has the same license.
-
-WeHarbor does not unpack/rebuild app.asar, patch database libraries or claim
-ownership of upstream applications. The ASAR checksum is verified before packaging.
-Image notices are installed at /usr/share/doc/weharbor; original application
-notices remain in their vendor locations.
+WeHarbor does not unpack, patch or rebuild vendor packages. Image notices are
+installed at /usr/share/doc/weharbor; original application notices remain in
+their vendor locations.
 
 WeHarbor is an independent community integration. Its name does not imply
-endorsement by Tencent, WeFlow, LinuxServer.io or the Selkies maintainers.
+endorsement by Tencent, the Alpha authors, LinuxServer.io or the Selkies maintainers.

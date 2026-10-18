@@ -7,8 +7,8 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      weflow_download_url:
-        description: Trusted HTTPS URL for the original WeFlow archive
+      alpha_download_url:
+        description: Trusted HTTPS URL for the original Alpha deb
         type: string
         required: false
       publish:
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      WEFLOW_DOWNLOAD_URL: ${{ inputs.weflow_download_url || vars.WEFLOW_DOWNLOAD_URL }}
+      ALPHA_DOWNLOAD_URL: ${{ inputs.alpha_download_url || vars.ALPHA_DOWNLOAD_URL }}
       WECHAT_DOWNLOAD_URL: ${{ vars.WECHAT_DOWNLOAD_URL }}
       PROJECT_SOURCE: ${{ github.server_url }}/${{ github.repository }}
     steps:

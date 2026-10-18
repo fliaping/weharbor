@@ -62,9 +62,12 @@ def install(selkies, assets, nginx):
     block = (nginx.parent / 'weharbor-pwa.conf').read_text().rstrip() + '\n'
     config = re.sub(r'location = SUBFOLDERweharbor\.webmanifest \{.*?'
                     r'location = SUBFOLDERweharbor-pwa\.js \{.*?\}\n?', '', config, flags=re.S)
-    if '  location SUBFOLDERfiles {' not in config:
-        raise RuntimeError('Unsupported nginx template: no files location')
-    config = config.replace('  location SUBFOLDERfiles {', block + '  location SUBFOLDERfiles {')
+    # Selkies 1.x templates had a files location; Selkies 2.x keeps api.
+    anchor = next((a for a in ('  location SUBFOLDERfiles {', '  location SUBFOLDERapi {')
+                   if a in config), None)
+    if anchor is None:
+        raise RuntimeError('Unsupported nginx template: no files/api location')
+    config = config.replace(anchor, block + anchor)
     nginx.write_text(config)
     print(f'WeHarbor web integration installed in {installed} dashboards')
 

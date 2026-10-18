@@ -1,0 +1,4 @@
+interface:
+  display_name: "Alpha API"
+  short_description: "Query WeChat history and events through Alpha"
+  default_prompt: "Use $alpha-api to find the requested WeChat session and summarize its relevant messages."

@@ -73,8 +73,8 @@ with urllib.request.urlopen(urllib.request.Request(url + 'weharbor-sw.js', heade
 print('Browser authentication, notifications and PWA resources passed')
 with urllib.request.urlopen(urllib.request.Request(url + 'notifications/apps', headers=headers), timeout=5) as response:
     apps = json.load(response)
-    assert apps['wechat']['running'] and apps['weflow']['running'], apps
-for app in ['wechat', 'weflow']:
+    assert apps['wechat']['running'] and apps['alpha']['running'], apps
+for app in ['wechat', 'alpha']:
     restart_url = url + f'notifications/apps/{app}/restart'
     for extra in [{}, {'Content-Type': 'application/json', 'X-WeHarbor-Action': 'restart',
                        'Origin': 'https://evil.example'}]:
@@ -93,7 +93,7 @@ print('Authenticated application restarts and cross-origin protection passed')
 def app_status():
     with urllib.request.urlopen(urllib.request.Request(url + 'notifications/apps', headers=headers), timeout=5) as response:
         return json.load(response)
-for app in ['weflow', 'wechat']:
+for app in ['alpha', 'wechat']:
     for attempt in range(60):
         if app_status()[app]['windows']:
             break
@@ -111,7 +111,7 @@ for app in ['weflow', 'wechat']:
         raise SystemExit('Switch accepted cross-origin request')
     with urllib.request.urlopen(urllib.request.Request(switch_url, data=b'{}', headers=switch_headers), timeout=10) as response:
         assert json.load(response)['windowId']
-    other = 'wechat' if app == 'weflow' else 'weflow'
+    other = 'wechat' if app == 'alpha' else 'alpha'
     for attempt in range(30):
         state = app_status()
         if state[app]['active'] and all(w['minimized'] for w in state[other]['windows']):
@@ -134,8 +134,9 @@ from pathlib import Path
 lock = json.loads(Path('/usr/share/weharbor/versions.lock.json').read_text())
 version = subprocess.check_output(['dpkg-query', '-W', '-f=${Version}', 'wechat'], text=True)
 assert version == lock['wechat']['version'], version
-asar = Path('/opt/weflow/resources/app.asar')
-assert hashlib.sha256(asar.read_bytes()).hexdigest() == lock['weflow']['asar_sha256']
+alpha = subprocess.check_output(['dpkg-query', '-W', '-f=${Version}', 'alpha'], text=True)
+assert alpha == lock['alpha']['version'], alpha
+subprocess.run(['dpkg', '--verify', 'alpha'], check=True)
 assert Path('/config/Documents/xwechat_files').is_symlink()
 subprocess.run(['pgrep', '-f', '^python3 /scripts/weharbor/window-layout.py$'],
                check=True, stdout=subprocess.DEVNULL)
@@ -155,7 +156,7 @@ assert clients, 'WeChat did not start through the DPI compatibility launcher'
 setting = Path('/config/.config/weharbor/wechat-dpi')
 setting.parent.mkdir(parents=True, exist_ok=True)
 setting.write_text('144\n')
-print('Pinned versions, original ASAR and data-path compatibility passed')
+print('Pinned versions, unmodified packages and data-path compatibility passed')
 PY
 docker restart "$container" >/dev/null
 ready=false
@@ -175,8 +176,8 @@ assert config.read_text().count('WeHarbor window defaults: begin') == 1
 rules = ET.parse(config).findall('.//{*}application')
 wechat = [r for r in rules if r.get('class') == 'wechat'][-1]
 assert wechat.find('{*}maximized').text == 'no'
-weflow = [r for r in rules if r.get('class') == 'weflow' and r.get('title') == 'WeFlow'][-1]
-assert weflow.find('{*}iconic').text == 'yes'
+alpha = [r for r in rules if r.get('class') == 'alpha-desktop' and r.get('title') == 'Alpha'][-1]
+assert alpha.find('{*}iconic').text == 'yes'
 assert Path('/config/.config/weharbor/wechat-dpi').read_text().strip() == '144'
 clients = []
 for executable in Path('/proc').glob('[0-9]*/exe'):

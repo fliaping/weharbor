@@ -7,12 +7,12 @@ import tempfile
 from pathlib import Path
 
 
-CONFIG_PATH = Path("/config/.config/weflow/browser-notifications.json")
+CONFIG_PATH = Path("/config/.config/weharbor/browser-notifications.json")
 DEFAULT_SETTINGS = {
     "enabled": True,
     "apps": {
         "wechat": True,
-        "weflow": True,
+        "alpha": True,
     },
 }
 

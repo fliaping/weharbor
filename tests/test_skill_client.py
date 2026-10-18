@@ -13,8 +13,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILL = ROOT / 'skills/weflow-api'
-spec = importlib.util.spec_from_file_location('skill_client', SKILL / 'scripts/weflow_api.py')
+SKILL = ROOT / 'skills/alpha-api'
+spec = importlib.util.spec_from_file_location('skill_client', SKILL / 'scripts/alpha_api.py')
 client = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(client)
 
@@ -81,18 +81,18 @@ class SkillClientTests(unittest.TestCase):
         self.server.server_close()
 
     def cli(self, *args, token=True, extra_env=None):
-        env = {'WEFLOW_API_BASE': self.base}
+        env = {'ALPHA_API_BASE': self.base}
         if token:
-            env['WEFLOW_API_TOKEN'] = self.server.test_token
+            env['ALPHA_API_TOKEN'] = self.server.test_token
         env.update(extra_env or {})
         stdout, stderr = io.StringIO(), io.StringIO()
-        with patch.dict(os.environ, env, clear=True), patch('sys.argv', ['weflow_api.py', *args]), contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        with patch.dict(os.environ, env, clear=True), patch('sys.argv', ['alpha_api.py', *args]), contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
             code = client.main()
         self.assertNotIn(self.server.test_token, stdout.getvalue() + stderr.getvalue())
         return code, stdout.getvalue(), stderr.getvalue()
 
     def test_health_does_not_read_or_send_credentials(self):
-        code, out, _ = self.cli('health', extra_env={'WEFLOW_API_TOKEN_FILE': '/nonexistent'})
+        code, out, _ = self.cli('health', extra_env={'ALPHA_API_TOKEN_FILE': '/nonexistent'})
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(out)['status'], 'ok')
         self.assertIsNone(self.server.requests[0][2])
@@ -100,7 +100,7 @@ class SkillClientTests(unittest.TestCase):
     def test_missing_token_never_makes_authenticated_request(self):
         code, _, error = self.cli('sessions', token=False)
         self.assertEqual(code, 1)
-        self.assertIn('WEFLOW_API_TOKEN', error)
+        self.assertIn('ALPHA_API_TOKEN', error)
         self.assertEqual(self.server.requests, [])
 
     def test_query_encoding_time_units_pagination_and_bearer_header(self):
@@ -130,9 +130,9 @@ class SkillClientTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             token_file = Path(directory) / 'token'
             token_file.write_text(self.server.test_token + '\n')
-            self.assertEqual(self.cli('sessions', token=False, extra_env={'WEFLOW_API_TOKEN_FILE': str(token_file)})[0], 0)
+            self.assertEqual(self.cli('sessions', token=False, extra_env={'ALPHA_API_TOKEN_FILE': str(token_file)})[0], 0)
             count = len(self.server.requests)
-            self.assertEqual(self.cli('sessions', extra_env={'WEFLOW_API_TOKEN': 'first\nsecond'})[0], 1)
+            self.assertEqual(self.cli('sessions', extra_env={'ALPHA_API_TOKEN': 'first\nsecond'})[0], 1)
             self.assertEqual(len(self.server.requests), count)
 
     def test_errors_do_not_echo_private_server_payloads(self):
