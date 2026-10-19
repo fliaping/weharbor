@@ -2,6 +2,8 @@
 
 本页适用于 WeHarbor 0.1.0 的组合：WeChat 4.1.13.23、Alpha 0.2.0、Selkies 2.0。
 Alpha 向导第一步之后的界面文字尚未在本项目中逐一核对，以实际界面为准。
+当前锁定的 Alpha 0.2.0 有 Linux 自动获取密钥的问题，见下方常见问题；
+首次启动与容器重启测试不能替代真实账号的密钥获取验证。
 先按 [README](../README.md#本地构建与启动) 完成构建和启动，再从这里继续。
 
 [English](first-run.en.md)
@@ -79,3 +81,9 @@ ALPHA_API_BASE / ALPHA_API_TOKEN。先查少量 sessions，再查一个会话的
   代理直接访问，也不要从浏览器页面发起请求。
 - 密钥获取失败：确认微信已登录；Alpha 的密钥助手内置有效期
   （0.2.0 为 2026-11-15），过期后需升级 Alpha。
+- `NATIVE_WECHAT_CAPTURE_PLATFORM_UNAVAILABLE`：Alpha 0.2.0 的 Linux
+  自动获取密钥路径存在上游已知问题（xunchahaha/alpha-releases，Issue #5；
+  作者于 2026-10-19 回复下个版本修复）。这与私有目录权限导致的空白窗口不同，
+  不能通过增加 SYS_PTRACE、改为 privileged 或放宽目录权限解决。
+  已有该账号密钥时可使用 Alpha 的手动导入入口，否则需等待已验证的上游修复。
+  密钥不要提交到仓库、日志或问题反馈中。

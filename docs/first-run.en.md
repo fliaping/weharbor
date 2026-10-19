@@ -2,6 +2,8 @@
 
 Applies to WeHarbor 0.1.0 with WeChat 4.1.13.23, Alpha 0.2.0 and Selkies 2.0.
 Alpha wizard screens after the first step have not been verified in detail.
+Alpha 0.2.0 has a known Linux automatic key acquisition failure; a passing
+container smoke test does not verify key acquisition with a real account.
 
 [中文](first-run.md)
 
@@ -23,3 +25,9 @@ Alpha wizard screens after the first step have not been verified in detail.
 Alpha stores its API token with Electron safeStorage; the container runs a
 password-less gnome-keyring, so the token is protected by the data volume's
 access control. Alpha 0.2.0's key helper embeds an expiry of 2026-11-15.
+
+`NATIVE_WECHAT_CAPTURE_PLATFORM_UNAVAILABLE` is tracked in upstream
+xunchahaha/alpha-releases issue #5. On October 19, 2026, the maintainer said
+it would be fixed in the next version. Adding SYS_PTRACE or privileged mode
+does not fix it. Import an existing key for the same account manually in
+Alpha, or wait for a verified upstream fix. Do not put keys in logs or Git.

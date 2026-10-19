@@ -15,6 +15,20 @@ cleanup() {
 }
 trap cleanup EXIT
 mkdir "$test_directory/config"
+# Seed synthetic state with the permissions seen on NAS volumes. No user data.
+python3 - "$test_directory/config" <<'PY'
+import sys
+from pathlib import Path
+for relative in ['.local/share/com.alpha.guard', '.local/state/alpha']:
+    root = Path(sys.argv[1]) / relative
+    directory = root / 'weharbor-permission-fixture'
+    directory.mkdir(parents=True)
+    directory.chmod(0o705)
+    root.chmod(0o705)
+    state = directory / 'state'
+    state.write_text('preserve existing state\n')
+    state.chmod(0o644)
+PY
 # The base image hands PASSWORD to `openssl passwd`, which reads a leading "-" as an option.
 export PASSWORD="$(python3 -c 'import secrets; print("w" + secrets.token_urlsafe(24))')"
 docker run -d --name "$container" --shm-size=1gb --cap-add SYS_PTRACE \
@@ -130,8 +144,17 @@ for app in ['alpha', 'wechat']:
 print('Web application switching, ownership and minimize behavior passed')
 PY
 docker exec -i "$container" python3 - <<'PY'
-import hashlib, json, subprocess
+import hashlib, json, stat, subprocess
 from pathlib import Path
+for relative in ['.local/share/com.alpha.guard', '.local/state/alpha']:
+    root = Path('/config') / relative
+    directory = root / 'weharbor-permission-fixture'
+    state = directory / 'state'
+    assert stat.S_IMODE(root.stat().st_mode) == 0o700
+    assert stat.S_IMODE(directory.stat().st_mode) == 0o700
+    assert stat.S_IMODE(state.stat().st_mode) == 0o600
+    assert state.read_text() == 'preserve existing state\n'
+print('Alpha private state permissions repaired without changing contents')
 lock = json.loads(Path('/usr/share/weharbor/versions.lock.json').read_text())
 version = subprocess.check_output(['dpkg-query', '-W', '-f=${Version}', 'wechat'], text=True)
 assert version == lock['wechat']['version'], version

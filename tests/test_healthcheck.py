@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import subprocess
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -12,6 +13,36 @@ spec.loader.exec_module(health)
 
 
 class HealthcheckTests(unittest.TestCase):
+    def test_blank_alpha_window_is_unhealthy_without_native_hosts(self):
+        hosts = ('alpha-engine', 'alpha-security-host', 'alpha-data-host')
+        for missing in hosts:
+            def run(args, **kwargs):
+                return subprocess.CompletedProcess(args, int(missing in args[-1]))
+
+            with self.subTest(missing=missing), \
+                    patch.dict(os.environ, {'AUTO_START_ALPHA': 'true'}, clear=True), \
+                    patch.object(health, 'get', return_value=b'<html></html>'), \
+                    patch.object(health.subprocess, 'run', side_effect=run):
+                with self.assertRaisesRegex(ValueError, missing):
+                    health.main()
+
+    def test_native_hosts_are_checked_without_requiring_first_run_api(self):
+        def get(url, authenticated=False):
+            if ':5031/' in url:
+                raise ConnectionRefusedError()
+            return b'{"status":"ok"}'
+
+        with patch.dict(os.environ, {'AUTO_START_ALPHA': 'true', 'AUTO_START_WECHAT': 'false',
+                                    'ENABLE_APP_SWITCHER': 'false'}, clear=True), \
+                patch.object(health, 'get', side_effect=get), \
+                patch.object(health.subprocess, 'run',
+                             return_value=subprocess.CompletedProcess([], 0)) as run:
+            health.main()
+            for name in ('alpha-engine', 'alpha-security-host', 'alpha-data-host'):
+                self.assertTrue(any(call.args[0] ==
+                                    ['pgrep', '-f', f'^/opt/Alpha/resources/bin/{name}( |$)']
+                                    for call in run.call_args_list))
+
     def check(self, asset, mode='web', enabled='true'):
         def get(url, authenticated=False):
             if url.endswith('/weharbor-apps.js'):

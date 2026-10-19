@@ -12,9 +12,21 @@ docker compose logs --tail=100
 ~~~
 
 Docker 健康检查覆盖浏览器桌面、启用的客户端、窗口切换器与通知桥接器。
+Alpha 除了桌面进程，还检查内部引擎、安全服务与数据服务；仅有空白窗口不算健康。
 Alpha 的 HTTP API 未启用时不会因此判定故障；启用后 /health 会被额外检查。
 未登录微信或未设置数据库密钥时，容器仍可健康运行，等待用户完成配置。
 首次登录、数据库密钥获取顺序及常见读取问题见 [首次使用教程](first-run.md)。
+
+### Alpha 空白窗口与私有目录权限
+
+部分 NAS 的目录权限继承会把 Alpha 私有目录创建为 0705，触发其安全策略，
+日志出现 SECURITY_RUNTIME_POLICY_REJECTED、application lock is unavailable
+或 ENGINE_NOT_STARTED。启动器会在启动 Alpha 前修复
+/config/.local/share/com.alpha.guard 与 /config/.local/state/alpha：
+目录设为 0700，普通文件设为 0600，并使用 umask 077 启动应用。
+修复保留文件内容，不跟随目录内的符号链接，也不修改其他应用目录或厂商程序。
+无法修复时会输出具体错误并停止本次启动，请检查卷是否只读及 PUID/PGID 是否正确。
+升级后通过网页重启 Alpha 或重启容器即可应用；日志位于 /config/.local/log/alpha.log。
 
 ## 备份与更新
 

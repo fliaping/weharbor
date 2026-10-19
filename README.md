@@ -74,6 +74,11 @@ BIND_ADDRESS=0.0.0.0，或使用 Tailscale Serve / 支持 WebSocket 的 HTTPS �
 4. 在 Alpha 设置中启用 HTTP API（端口 5031），复制访问 Token；
    需要实时通知时同时开启主动推送。
 
+当前锁定的 Alpha 0.2.0 在 Linux 上自动获取数据库密钥可能报
+`NATIVE_WECHAT_CAPTURE_PLATFORM_UNAVAILABLE`，上游 Issue #5 已确认并计划修复。
+这不是容器缺少 SYS_PTRACE；可在 Alpha 中手动导入该账号已有的数据库密钥，
+或等待经验证的上游修复版本。容器健康检查通过不代表密钥获取已成功。
+
 Alpha 的 API 只监听容器内 127.0.0.1:5031；容器内 nginx 在 5032 端口转发，
 Compose 默认映射到宿主机 127.0.0.1:${API_PORT:-5031}。所有请求（/health 除外）
 仍需 Alpha 的 Bearer Token；带浏览器 Origin 头的请求会被拒绝。

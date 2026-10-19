@@ -25,6 +25,16 @@ def main():
     get('http://127.0.0.1:3000/', authenticated=True)
     if enabled('AUTO_START_ALPHA'):
         subprocess.run(['pgrep', '-x', 'alpha'], check=True, stdout=subprocess.DEVNULL)
+        # Electron can stay alive with a blank window while its engine fails
+        # security checks and repeatedly restarts. Require the native hosts too.
+        for name in ('alpha-engine', 'alpha-security-host', 'alpha-data-host'):
+            # Linux comm truncates alpha-security-host; match the executable
+            # path instead, allowing its normal command-line arguments.
+            result = subprocess.run(
+                ['pgrep', '-f', rf'^/opt/Alpha/resources/bin/{name}( |$)'],
+                stdout=subprocess.DEVNULL)
+            if result.returncode:
+                raise ValueError(f'Alpha backend is not running: {name}')
     if enabled('AUTO_START_WECHAT'):
         subprocess.run(['pgrep', '-x', 'wechat'], check=True, stdout=subprocess.DEVNULL)
     if enabled('ENABLE_APP_SWITCHER') and os.environ.get('APP_SWITCHER_MODE', 'web') == 'desktop':
@@ -58,5 +68,5 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as error:
-        print(f'WeHarbor: {type(error).__name__}', file=sys.stderr)
+        print(f'WeHarbor: {type(error).__name__}: {error}', file=sys.stderr)
         sys.exit(1)
