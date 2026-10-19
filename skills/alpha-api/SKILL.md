@@ -89,8 +89,7 @@ failures. It never prints server error bodies or request credentials.
 
 ## Alpha compatibility note
 
-This client was written for the WeFlow HTTP API. Alpha 0.2.0 exposes the same
-route names (/health, /api/v1/sessions, /api/v1/messages, /api/v1/contacts,
+Alpha 0.2.0 exposes these route names (/health, /api/v1/sessions, /api/v1/messages, /api/v1/contacts,
 /api/v1/group-members, /api/v1/sns/*, /api/v1/media/*, /api/v1/push/messages,
 plus /mcp), bearer or access_token authentication and port 5031, but query
 parameters and response fields have not yet been verified against a live Alpha

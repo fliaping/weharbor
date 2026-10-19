@@ -52,14 +52,15 @@ docker compose exec weharbor weharbor-health
 
 同一个微信数据目录不能同时由两个容器使用。
 
-### 从 WeFlow / wechat-selkies 版本升级
+### 从早期版本升级
 
 新镜像首次启动时，init-weharbor-profile 会把引用旧脚本的
 /config/.config/openbox/autostart 与 menu.xml 替换为新默认值（原文件保留为
-*.legacy-<时间戳>），并把应用条与通知设置从 .config/weflow 复制到 .config/weharbor。
-微信登录数据保持不变；WeFlow 的配置与 Token 不会迁移，需要在 Alpha 中重新完成
-首次设置并生成新的 API Token。.env 中 WEFLOW_API_PORT 改为 API_PORT，
-AUTO_START_WEFLOW 改为 AUTO_START_ALPHA；自动登录与夜间重启相关变量已不再使用。
+*.legacy-<时间戳>），并把旧数据应用目录中的应用条与通知设置复制到 .config/weharbor。
+微信登录数据保持不变；旧数据应用的配置与 Token 不会迁移，需要在 Alpha 中重新完成
+首次设置并生成新的 API Token。.env 中旧的 API 端口变量改为 API_PORT，
+自动启动变量改为 AUTO_START_ALPHA；自动登录与夜间重启相关变量已不再使用。
+可对照 .env.example 更新。
 
 ## 初始窗口布局
 

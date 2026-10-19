@@ -19,7 +19,7 @@ Selkies 2.0 基础镜像（Debian trixie），把官方 Linux 微信和 Alpha �
 （ghcr.io/linuxserver/baseimage-selkies:debiantrixie，按 digest 锁定）。
 目前仅支持 linux/amd64。
 
-> 注意：从 WeFlow 切换到 Alpha 的版本尚未发布预构建镜像，请本地构建。
+> 预构建镜像：ghcr.io/fliaping/weharbor:edge（main 分支）。
 > Alpha 是闭源、未签名的二进制发行版，许可证未声明；其密钥助手内置
 > 2026-11-15 的有效期，需要随上游更新。详见 [组件许可](THIRD_PARTY_NOTICES.md)。
 
@@ -91,8 +91,7 @@ npx --yes skills add https://github.com/fliaping/weharbor --skill alpha-api --ye
 ~~~
 
 在 AI 执行环境配置 ALPHA_API_BASE 与 ALPHA_API_TOKEN（或 ALPHA_API_TOKEN_FILE）。
-客户端最初为 WeFlow API 编写；Alpha 的路由名称一致，但参数与返回字段仍待在真实
-实例上核对。详见 [安装页](docs/install-skill.md)。
+路由来自 Alpha 0.2.0 的静态分析，参数与返回字段仍待在真实实例上核对。详见 [安装页](docs/install-skill.md)。
 
 ## 配置
 
@@ -135,5 +134,5 @@ WeHarbor 的集成代码使用 MIT 许可证。微信、Alpha、Selkies 及其�
 各自许可；Alpha 的分发条款未明确，公开发布组合镜像前需先核实。
 详见 THIRD_PARTY_NOTICES.md。
 
-感谢 LinuxServer.io、Selkies、wechat-selkies 与 WeFlow 项目的维护者，
+感谢 LinuxServer.io、Selkies 与 wechat-selkies 项目的维护者，
 以及 Alpha 的作者。WeHarbor 是独立的社区集成项目。

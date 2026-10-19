@@ -12,7 +12,7 @@
   Alpha binds 127.0.0.1 only; nginx republishes it on ALPHA_API_PROXY_PORT
   (5032) and rejects browser Origin headers.
 - Changes to initialization must preserve existing profiles and user settings
-  (see init-weharbor-profile for the legacy WeFlow/wechat-selkies migration).
+  (see init-weharbor-profile for the legacy profile migration).
 - Run python3 scripts/check.py; for image changes, build and run
   scripts/smoke-test.sh IMAGE with an empty, temporary profile.
 - Keep the public skill in skills/alpha-api self-contained and portable.

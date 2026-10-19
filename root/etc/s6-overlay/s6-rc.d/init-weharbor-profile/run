@@ -1,5 +1,5 @@
 #!/usr/bin/with-contenv bash
-# Migrate desktop profiles created by the former wechat-selkies/WeFlow image.
+# Migrate desktop profiles created by earlier WeHarbor images.
 # init-selkies-config copies /defaults only when a file is missing, so legacy
 # autostart and menu entries would otherwise keep calling removed scripts.
 conf="${HOME:-/config}/.config/openbox"
@@ -13,7 +13,7 @@ for name in autostart menu.xml; do
         echo "[weharbor] migrated legacy ${file}"
     fi
 done
-# Settings moved out of the WeFlow-specific directory.
+# Settings moved out of the legacy data-app directory.
 old="${HOME:-/config}/.config/weflow"
 new="${HOME:-/config}/.config/weharbor"
 if [ -d "${old}" ]; then

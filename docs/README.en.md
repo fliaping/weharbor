@@ -43,7 +43,7 @@ Alpha starts minimized and WeChat receives focus; only the WeChat main window
 is maximized once after login. PWA installation is supported over trusted HTTPS
 (see [pwa.md](pwa.md)). All state persists in ./data mounted at /config.
 
-Compared with the former wechat-selkies/WeFlow image, WeChat auto-login clicking
+Compared with earlier WeHarbor releases, WeChat auto-login clicking
 and nightly restarts were removed, and no Chinese IME is preinstalled.
 Existing profiles are migrated automatically (see [operations](operations.md)).
 
@@ -57,8 +57,8 @@ npx --yes skills add https://github.com/fliaping/weharbor --skill alpha-api --ye
 ~~~
 
 Configure ALPHA_API_BASE and ALPHA_API_TOKEN (or ALPHA_API_TOKEN_FILE) locally.
-The client was written for WeFlow's API; Alpha uses the same route names, but
-parameters and response fields are not yet verified against a live instance.
+Routes come from static analysis of Alpha 0.2.0; parameters and response
+fields are not yet verified against a live instance.
 
 WeHarbor integration code is MIT licensed. Vendor components keep their own
 licenses; Alpha's redistribution terms are unclear, so do not publish a combined
