@@ -15,6 +15,10 @@ on:
         description: Publish the tested image to this repository's GHCR package
         type: boolean
         default: false
+      image_tag:
+        description: Extra image tag for a manual publish (not latest or edge), for example selkies2-alpha
+        type: string
+        required: false
 permissions:
   contents: read
   packages: write
@@ -43,6 +47,15 @@ jobs:
           fi
           printf 'RELEASE_VERSION=%s\n' "$version" >> "$GITHUB_ENV"
           printf 'IMAGE_REPOSITORY=ghcr.io/%s\n' "${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - name: Validate manual image tag
+        if: github.event_name == 'workflow_dispatch' && inputs.image_tag != ''
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ || "$IMAGE_TAG" == latest || "$IMAGE_TAG" == edge ]]; then
+            printf 'Invalid manual image tag: %s\n' "$IMAGE_TAG" >&2
+            exit 1
+          fi
       - name: Prepare pinned assets
         # Cache only checksum-verified vendor archives, never a /config profile.
         uses: actions/cache@v4
@@ -62,6 +75,7 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=${{ inputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' && inputs.image_tag != '' }}
       - name: Build
         uses: docker/build-push-action@v7
         with:
