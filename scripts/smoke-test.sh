@@ -15,7 +15,8 @@ cleanup() {
 }
 trap cleanup EXIT
 mkdir "$test_directory/config"
-export PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(24))')"
+# The base image hands PASSWORD to `openssl passwd`, which reads a leading "-" as an option.
+export PASSWORD="$(python3 -c 'import secrets; print("w" + secrets.token_urlsafe(24))')"
 docker run -d --name "$container" --shm-size=1gb --cap-add SYS_PTRACE \
     -e CUSTOM_USER=weharbor -e PASSWORD -e PUID="$(id -u)" -e PGID="$(id -g)" \
     -e TZ=Asia/Shanghai -v "$test_directory/config:/config" \
