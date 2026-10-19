@@ -154,3 +154,7 @@ fork 的发布地址自动跟随 github.repository，不绑定某个个人账号
 在没有 systemd 的主机上，dockerd 与 tailscaled 需要手动拉起；容器使用
 restart: unless-stopped，dockerd 启动后会自动恢复。Tailscale Serve 配置保存在
 tailscaled 状态目录中，重启 tailscaled 后仍生效。
+
+## proot-apps
+
+WeChat and Alpha are not installed as proot-apps: Alpha's key helper refuses to run under proot. See [proot-apps-evaluation.md](proot-apps-evaluation.md).

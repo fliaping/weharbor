@@ -1,0 +1,10 @@
+# Test-only: Alpha 0.2.0 packaged the way a proot-apps app would be
+# (proot-apps debian-trixie base, unmodified pinned deb, /entrypoint).
+FROM ghcr.io/linuxserver/proot-apps:debian-trixie
+COPY alpha.deb /tmp/alpha.deb
+RUN echo "9d79a56b88981c496818d93600698d11f8e21d759381c66c3fec3a10b38980d6  /tmp/alpha.deb" | sha256sum -c - \
+ && apt-get update -o Acquire::Retries=5 \
+ && apt-get install -y --no-install-recommends /tmp/alpha.deb gnome-keyring dbus-x11 \
+ && rm -rf /var/lib/apt/lists/* /tmp/alpha.deb
+COPY target reader /usr/local/bin/
+RUN printf '#!/bin/sh\nexec /opt/Alpha/alpha --no-sandbox --password-store=gnome-libsecret "$@"\n' > /entrypoint && chmod +x /entrypoint
