@@ -1,5 +1,5 @@
 #!/lsiopy/bin/python3
-"""Tiny X11 task switcher for the WeChat + WeFlow Selkies desktop.
+"""Tiny X11 task switcher for the WeChat + Alpha Selkies desktop.
 
 This intentionally uses only python-xlib, which is already present in the
 upstream image. It is a draggable floating window, not a desktop panel.
@@ -42,9 +42,9 @@ AUTO_HIDE_DELAY_SECONDS = 1.2
 PANEL_OPACITY = 0.92
 POLL_SECONDS = 0.5
 RAISE_INTERVAL_SECONDS = 1.0
-POSITION_FILE = "/config/.config/weflow/app-switcher-position"
+POSITION_FILE = "/config/.config/weharbor/app-switcher-position"
 SWITCHER_SETTINGS_FILE = (
-    "/config/.config/weflow/app-switcher-settings.json"
+    "/config/.config/weharbor/app-switcher-settings.json"
 )
 
 APPS = (
@@ -57,12 +57,12 @@ APPS = (
         "command": ["/scripts/wechat/wechat-start.sh"],
     },
     {
-        "label": "WeFlow",
-        "classes": {"weflow"},
-        "primary_classes": {"weflow"},
-        "process_names": {"weflow"},
-        "executable_prefixes": ("/opt/weflow/",),
-        "command": ["/scripts/weflow/weflow-start.sh"],
+        "label": "Alpha",
+        "classes": {"alpha-desktop", "alpha"},
+        "primary_classes": {"alpha-desktop"},
+        "process_names": {"alpha"},
+        "executable_prefixes": ("/opt/Alpha/",),
+        "command": ["/scripts/alpha/alpha-start.sh"],
     },
 )
 
@@ -1271,7 +1271,7 @@ class AppSwitcher:
         rows = (
             ("All", settings["enabled"]),
             ("WeChat", settings["apps"]["wechat"]),
-            ("WeFlow", settings["apps"]["weflow"]),
+            ("Alpha", settings["apps"]["alpha"]),
         )
         self.notification_menu_buffer.fill_rectangle(
             self.panel_gc,
@@ -1439,7 +1439,7 @@ class AppSwitcher:
         elif row == 1:
             settings["apps"]["wechat"] = not settings["apps"]["wechat"]
         elif row == 2:
-            settings["apps"]["weflow"] = not settings["apps"]["weflow"]
+            settings["apps"]["alpha"] = not settings["apps"]["alpha"]
         save_settings(settings)
         self.notification_menu_last_interaction = time.monotonic()
         self.last_visual_state = None

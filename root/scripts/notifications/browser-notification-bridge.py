@@ -28,10 +28,12 @@ NOTIFICATION_INTERFACE = "org.freedesktop.Notifications"
 OBJECT_PATH = "/org/freedesktop/Notifications"
 LISTEN_HOST = "127.0.0.1"
 LISTEN_PORT = 8765
-SUPPORTED_APPS = {"wechat", "weflow"}
-WEFLOW_CONFIG_PATH = Path("/config/.config/weflow/WeFlow-config.json")
-WEFLOW_PUSH_RECONNECT_SECONDS = 3
-WEFLOW_PUSH_EVENT_TTL_SECONDS = 15 * 60
+SUPPORTED_APPS = {"wechat", "alpha"}
+ALPHA_TOKEN_PATH = Path(
+    os.environ.get("ALPHA_API_TOKEN_FILE", "/config/.config/weharbor/alpha-api-token")
+)
+ALPHA_PUSH_RECONNECT_SECONDS = 3
+ALPHA_PUSH_EVENT_TTL_SECONDS = 15 * 60
 
 
 def env_enabled(name, default=True):
@@ -62,8 +64,8 @@ def classify_app(app_name, summary, hints):
             str(summary or ""),
         )
     ).lower()
-    if "weflow" in identity:
-        return "weflow"
+    if "alpha" in identity:
+        return "alpha"
     if any(value in identity for value in ("wechat", "weixin", "微信")):
         return "wechat"
     return None
@@ -74,7 +76,7 @@ class NotificationRelay:
         self.loop = None
         self.clients = set()
         self.browser_status = {}
-        self.weflow_push_status = {
+        self.alpha_push_status = {
             "stage": "starting",
             "lastEvent": None,
             "lastError": None,
@@ -114,7 +116,7 @@ class NotificationRelay:
                 "status": "ok",
                 "clients": len(self.clients),
                 "browser_status": list(self.browser_status.values()),
-                "weflow_push": self.weflow_push_status,
+                "alpha_push": self.alpha_push_status,
             }
         )
 
@@ -189,28 +191,26 @@ class NotificationRelay:
         return response
 
 
-def load_weflow_push_config():
-    try:
-        config = json.loads(WEFLOW_CONFIG_PATH.read_text(encoding="utf-8"))
-    except (FileNotFoundError, OSError, json.JSONDecodeError):
+def load_alpha_push_config():
+    """Alpha encrypts its API token with safeStorage, so the bridge cannot read
+    it from Alpha's settings. The user opts in by saving the token copied from
+    Alpha's settings page to ALPHA_API_TOKEN_FILE (or ALPHA_API_TOKEN)."""
+    token = os.environ.get("ALPHA_API_TOKEN", "").strip()
+    if not token:
+        try:
+            token = ALPHA_TOKEN_PATH.read_text(encoding="utf-8").strip()
+        except (FileNotFoundError, OSError):
+            return None
+    if not token:
         return None
-    if not isinstance(config, dict):
-        return None
-
-    token = str(config.get("httpApiToken", "")).strip()
-    if not token or token.startswith(("safe:", "lock:")):
-        return {
-            "enabled": config.get("messagePushEnabled") is True,
-            "error": "WeFlow API token is unavailable to the bridge",
-        }
     try:
-        port = int(config.get("httpApiPort", 5031))
-    except (TypeError, ValueError):
+        port = int(os.environ.get("ALPHA_API_PORT", "5031"))
+    except ValueError:
         port = 5031
     if not 1 <= port <= 65535:
         port = 5031
     return {
-        "enabled": config.get("messagePushEnabled") is True,
+        "enabled": True,
         "url": f"http://127.0.0.1:{port}/api/v1/push/messages",
         "token": token,
     }
@@ -231,7 +231,7 @@ class RecentPushEvents:
 
     def add(self, payload):
         now = time.monotonic()
-        cutoff = now - WEFLOW_PUSH_EVENT_TTL_SECONDS
+        cutoff = now - ALPHA_PUSH_EVENT_TTL_SECONDS
         while self.events:
             _, created_at = next(iter(self.events.items()))
             if created_at >= cutoff:
@@ -249,8 +249,8 @@ class RecentPushEvents:
         return True
 
 
-async def consume_weflow_push(relay):
-    """Forward WeFlow's structured message SSE directly to browser clients."""
+async def consume_alpha_push(relay):
+    """Forward Alpha's structured message SSE directly to browser clients."""
     seen = RecentPushEvents()
     last_event_id = ""
     process_started_at = int(time.time())
@@ -258,31 +258,31 @@ async def consume_weflow_push(relay):
 
     async with ClientSession(timeout=timeout) as session:
         while True:
-            config = load_weflow_push_config()
+            config = load_alpha_push_config()
             if not config:
-                relay.weflow_push_status = {
+                relay.alpha_push_status = {
                     "stage": "waiting-for-config",
                     "lastEvent": None,
                     "lastError": None,
                 }
-                await asyncio.sleep(WEFLOW_PUSH_RECONNECT_SECONDS)
+                await asyncio.sleep(ALPHA_PUSH_RECONNECT_SECONDS)
                 continue
             if config.get("error"):
-                relay.weflow_push_status = {
+                relay.alpha_push_status = {
                     "stage": "configuration-error",
                     "lastEvent": None,
                     "lastError": config["error"],
                 }
-                LOGGER.warning("WeFlow push: %s", config["error"])
+                LOGGER.warning("Alpha push: %s", config["error"])
                 await asyncio.sleep(10)
                 continue
             if not config["enabled"]:
-                relay.weflow_push_status = {
+                relay.alpha_push_status = {
                     "stage": "disabled",
                     "lastEvent": None,
-                    "lastError": "messagePushEnabled is false",
+                    "lastError": "Alpha push is disabled",
                 }
-                await asyncio.sleep(WEFLOW_PUSH_RECONNECT_SECONDS)
+                await asyncio.sleep(ALPHA_PUSH_RECONNECT_SECONDS)
                 continue
 
             headers = {
@@ -293,30 +293,30 @@ async def consume_weflow_push(relay):
                 headers["Last-Event-ID"] = last_event_id
 
             try:
-                relay.weflow_push_status = {
+                relay.alpha_push_status = {
                     "stage": "connecting",
-                    "lastEvent": relay.weflow_push_status.get("lastEvent"),
+                    "lastEvent": relay.alpha_push_status.get("lastEvent"),
                     "lastError": None,
                 }
                 async with session.get(config["url"], headers=headers) as response:
                     if response.status != 200:
                         error = f"HTTP {response.status}"
-                        relay.weflow_push_status = {
+                        relay.alpha_push_status = {
                             "stage": "error",
-                            "lastEvent": relay.weflow_push_status.get(
+                            "lastEvent": relay.alpha_push_status.get(
                                 "lastEvent"
                             ),
                             "lastError": error,
                         }
-                        LOGGER.warning("WeFlow push connection failed: %s", error)
+                        LOGGER.warning("Alpha push connection failed: %s", error)
                         await response.read()
-                        await asyncio.sleep(WEFLOW_PUSH_RECONNECT_SECONDS)
+                        await asyncio.sleep(ALPHA_PUSH_RECONNECT_SECONDS)
                         continue
 
-                    LOGGER.info("connected to WeFlow message push stream")
-                    relay.weflow_push_status = {
+                    LOGGER.info("connected to Alpha message push stream")
+                    relay.alpha_push_status = {
                         "stage": "connected",
-                        "lastEvent": relay.weflow_push_status.get("lastEvent"),
+                        "lastEvent": relay.alpha_push_status.get("lastEvent"),
                         "lastError": None,
                     }
                     event_name = ""
@@ -349,7 +349,7 @@ async def consume_weflow_push(relay):
                             payload = json.loads("\n".join(data_lines))
                         except (json.JSONDecodeError, TypeError):
                             LOGGER.warning(
-                                "ignored malformed WeFlow push event %r",
+                                "ignored malformed Alpha push event %r",
                                 event_name,
                             )
                         else:
@@ -368,7 +368,7 @@ async def consume_weflow_push(relay):
                                 )
                                 if stale_replay:
                                     LOGGER.info(
-                                        "skipped stale WeFlow replay event=%r",
+                                        "skipped stale Alpha replay event=%r",
                                         event_name,
                                     )
                                 elif seen.add(payload):
@@ -400,7 +400,7 @@ async def consume_weflow_push(relay):
                                                 "body": body,
                                             }
                                         )
-                                    relay.weflow_push_status = {
+                                    relay.alpha_push_status = {
                                         "stage": (
                                             "event-forwarded"
                                             if enabled
@@ -413,7 +413,7 @@ async def consume_weflow_push(relay):
                                         "lastError": None,
                                     }
                                     LOGGER.info(
-                                        "WeFlow push event=%r "
+                                        "Alpha push event=%r "
                                         "browser_forwarded=%s",
                                         event_name,
                                         enabled,
@@ -422,16 +422,16 @@ async def consume_weflow_push(relay):
                         event_id = ""
                         data_lines = []
             except (ClientError, asyncio.TimeoutError, OSError) as error:
-                relay.weflow_push_status = {
+                relay.alpha_push_status = {
                     "stage": "error",
-                    "lastEvent": relay.weflow_push_status.get("lastEvent"),
+                    "lastEvent": relay.alpha_push_status.get("lastEvent"),
                     "lastError": type(error).__name__,
                 }
                 LOGGER.warning(
-                    "WeFlow push stream disconnected: %s",
+                    "Alpha push stream disconnected: %s",
                     type(error).__name__,
                 )
-                await asyncio.sleep(WEFLOW_PUSH_RECONNECT_SECONDS)
+                await asyncio.sleep(ALPHA_PUSH_RECONNECT_SECONDS)
 
 
 class FreedesktopNotificationMonitor:
@@ -521,7 +521,7 @@ async def serve_http(relay, ready):
     await runner.setup()
     site = web.TCPSite(runner, LISTEN_HOST, LISTEN_PORT)
     await site.start()
-    push_task = asyncio.create_task(consume_weflow_push(relay))
+    push_task = asyncio.create_task(consume_alpha_push(relay))
     ready.set()
     LOGGER.info(
         "notification bridge listening on http://%s:%s",

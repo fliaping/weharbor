@@ -10,8 +10,9 @@ from urllib.parse import urlsplit
 APPS = {
     'wechat': {'executable': '/opt/wechat/wechat', 'prefix': '/opt/wechat/',
                'command': ['/usr/bin/wechat']},
-    'weflow': {'executable': '/opt/weflow/weflow', 'prefix': '/opt/weflow/',
-               'command': ['/opt/weflow/weflow', '--no-sandbox']},
+    'alpha': {'executable': '/opt/Alpha/alpha', 'prefix': '/opt/Alpha/',
+               'command': ['/opt/Alpha/alpha', '--no-sandbox',
+                          '--password-store=gnome-libsecret']},
 }
 
 

@@ -30,9 +30,9 @@ class AppControlTests(unittest.TestCase):
         with patch.object(control.os, 'getuid', return_value=1000), \
                 patch.object(manager, 'processes', return_value={}), \
                 patch.object(manager, 'launch') as launch:
-            manager.switch('weflow')
-            launch.assert_called_once_with('weflow')
-        self.assertFalse(manager.locks['weflow'].locked())
+            manager.switch('alpha')
+            launch.assert_called_once_with('alpha')
+        self.assertFalse(manager.locks['alpha'].locked())
 
     def test_restart_requires_same_origin_json_custom_header(self):
         headers = {'X-WeHarbor-Action': 'restart', 'Origin': 'https://desktop.example:7555'}

@@ -30,7 +30,7 @@ def configure_openbox(config=CONFIG):
     groups = root.findall(tag('applications'))
     group = groups[-1] if groups else ET.SubElement(root, tag('applications'))
     # Replace only our marked block. Keep unrelated rules, bindings and
-    # desktop preferences, including user-defined WeChat/WeFlow rules.
+    # desktop preferences, including user-defined WeChat/Alpha rules.
     for existing in groups:
         managed = False
         for rule in list(existing):
@@ -46,11 +46,11 @@ def configure_openbox(config=CONFIG):
     wechat = ET.SubElement(group, tag('application'), {'class': 'wechat'})
     for name, value in [('focus', 'yes'), ('maximized', 'no')]:
         ET.SubElement(wechat, tag(name)).text = value
-    # Restrict to the main WeFlow window; leave settings and dialogs usable.
-    weflow = ET.SubElement(group, tag('application'),
-                          {'class': 'weflow', 'title': 'WeFlow', 'type': 'normal'})
-    ET.SubElement(weflow, tag('focus')).text = 'no'
-    ET.SubElement(weflow, tag('iconic')).text = 'yes'
+    # Restrict to the main Alpha window; leave settings and dialogs usable.
+    alpha = ET.SubElement(group, tag('application'),
+                          {'class': 'alpha-desktop', 'title': 'Alpha', 'type': 'normal'})
+    ET.SubElement(alpha, tag('focus')).text = 'no'
+    ET.SubElement(alpha, tag('iconic')).text = 'yes'
     group.append(ET.Comment(RULE_END))
     data = ET.tostring(root, encoding='utf-8', xml_declaration=True)
     temporary = config.with_suffix('.xml.weharbor-pending')
@@ -147,14 +147,14 @@ class Layout:
                 classes = tuple((x or '').lower() for x in (window.get_wm_class() or ()))
                 state = self.states.setdefault(wid, {'seen': now, 'minimized': False,
                                                      'focused': False, 'maximized': False})
-                if 'weflow' in classes:
+                if 'alpha-desktop' in classes:
                     title = self.property(window, '_NET_WM_NAME')
                     name = title.value.decode('utf-8', errors='replace') if title else window.get_wm_name()
-                    if name == 'WeFlow' and not state['minimized']:
+                    if name == 'Alpha' and not state['minimized']:
                         self.send(window, 'WM_CHANGE_STATE', [Xutil.IconicState, 0, 0, 0, 0])
                         state['minimized'] = True
                         self.focus_at = now + 0.3
-                        print('WeFlow initial window minimized', flush=True)
+                        print('Alpha initial window minimized', flush=True)
                 elif 'wechat' in classes:
                     wechat.append(window)
                     if not state['focused']:

@@ -61,14 +61,14 @@
         <span>微信</span><span class="app-status" data-status="wechat">…</span></button>
         <button type="button" data-app="wechat" data-action="restart" title="重启微信" aria-label="重启微信">↻</button></div>
       <details data-windows="wechat"><summary>微信窗口</summary><div class="app-windows"></div></details>
-      <div class="app-row"><button type="button" class="app-switch" data-app="weflow" data-action="switch">
-        <span>WeFlow</span><span class="app-status" data-status="weflow">…</span></button>
-        <button type="button" data-app="weflow" data-action="restart" title="重启 WeFlow" aria-label="重启 WeFlow">↻</button></div>
-      <details data-windows="weflow"><summary>WeFlow 窗口</summary><div class="app-windows"></div></details>
+      <div class="app-row"><button type="button" class="app-switch" data-app="alpha" data-action="switch">
+        <span>Alpha</span><span class="app-status" data-status="alpha">…</span></button>
+        <button type="button" data-app="alpha" data-action="restart" title="重启 Alpha" aria-label="重启 Alpha">↻</button></div>
+      <details data-windows="alpha"><summary>Alpha 窗口</summary><div class="app-windows"></div></details>
       <p class="app-hint">点击应用切换；再次点击可轮换窗口。重启前请保存未发送的内容。</p>
       <div class="app-settings"><label><input type="checkbox" data-setting="enabled">浏览器通知</label>
         <label><input type="checkbox" data-setting="wechat">微信通知</label>
-        <label><input type="checkbox" data-setting="weflow">WeFlow 通知</label></div>
+        <label><input type="checkbox" data-setting="alpha">Alpha 通知</label></div>
       <p class="app-feedback" role="status" aria-live="polite"></p>`;
     const feedback = panel.querySelector('.app-feedback');
     let busy = false, refreshing = false, timer = null, drag = null, suppressClick = false;
@@ -99,7 +99,7 @@
       return result;
     };
     const render = () => {
-      for (const app of ['wechat', 'weflow']) {
+      for (const app of ['wechat', 'alpha']) {
         const state = status[app] || {};
         panel.querySelector('[data-status="' + app + '"]').textContent =
           state.restarting ? '处理中' : state.active ? '当前应用' : state.running ? '运行中' : '点击启动';
@@ -159,7 +159,7 @@
       const button = event.target.closest('[data-action]');
       if (!button || busy || button.disabled) return;
       const app = button.dataset.app, action = button.dataset.action;
-      const name = app === 'wechat' ? '微信' : 'WeFlow';
+      const name = app === 'wechat' ? '微信' : 'Alpha';
       busy = true; render();
       feedback.textContent = name + (action === 'restart' ? '正在重启，请稍候…' : '正在切换…');
       try {

@@ -1,3 +1,3 @@
 /scripts/notifications/notification-autostart.sh
-/scripts/start.sh &
-/scripts/weflow/weflow-autostart.sh
+/scripts/weharbor/desktop-start.sh &
+/scripts/alpha/alpha-autostart.sh

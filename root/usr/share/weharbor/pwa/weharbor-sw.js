@@ -13,7 +13,7 @@ self.addEventListener("fetch", (event) => {
     'p{line-height:1.7;color:#bccddd}a{display:inline-block;padding:12px 18px;' +
     'background:#56dfbb;color:#101c2d;border-radius:12px;text-decoration:none}</style>' +
     '</head><body><main><h1>WeHarbor｜微港</h1><p>无法连接桌面。' +
-    '请检查网络和服务器，恢复连接后重试。微信与 WeFlow 需要在线使用。</p>' +
+    '请检查网络和服务器，恢复连接后重试。微信与 Alpha 需要在线使用。</p>' +
     '<a href="./">重新连接</a></main></body></html>',
     {status: 503, headers: {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"}}
   )));

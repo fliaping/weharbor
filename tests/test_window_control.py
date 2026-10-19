@@ -23,7 +23,7 @@ class WindowControlTests(unittest.TestCase):
     def windows(self, active=11):
         return {'wechat': [{'id': 11, 'active': active == 11, 'minimized': False},
                            {'id': 12, 'active': active == 12, 'minimized': False}],
-                'weflow': [{'id': 21, 'active': active == 21, 'minimized': False},
+                'alpha': [{'id': 21, 'active': active == 21, 'minimized': False},
                            {'id': 22, 'active': False, 'minimized': True}]}
 
     def test_active_app_cycles_and_only_hides_other_app(self):
@@ -56,7 +56,7 @@ class WindowControlTests(unittest.TestCase):
         self.assertEqual(desktop.send.call_args.args[1], '_NET_ACTIVE_WINDOW')
 
     def test_no_window_does_not_hide_other_app(self):
-        desktop = self.desktop({'wechat': [], 'weflow': self.windows()['weflow']})
+        desktop = self.desktop({'wechat': [], 'alpha': self.windows()['alpha']})
         self.assertIsNone(desktop.activate('wechat'))
         desktop.send.assert_not_called()
 
@@ -69,7 +69,7 @@ class WindowControlTests(unittest.TestCase):
                                (33, 101, ['_NET_WM_WINDOW_TYPE_DOCK']), (44, 201, [])]:
             window = Mock()
             window.get_geometry.return_value = types.SimpleNamespace(width=600, height=400)
-            window.get_wm_class.return_value = ('wechat',) if pid == 101 else ('weflow',)
+            window.get_wm_class.return_value = ('wechat',) if pid == 101 else ('alpha-desktop',)
             window.get_wm_name.return_value = 'Window'
             windows[wid] = window
             properties[wid] = {'_NET_WM_PID': [pid], '_NET_WM_WINDOW_TYPE': kind,
@@ -84,5 +84,5 @@ class WindowControlTests(unittest.TestCase):
                                   lambda app: {101: ('1', True)} if app == 'wechat' else {201: ('2', True)}, {})
         result = desktop.snapshot()
         self.assertEqual([w['id'] for w in result['wechat']], [11])
-        self.assertEqual([w['id'] for w in result['weflow']], [44])
+        self.assertEqual([w['id'] for w in result['alpha']], [44])
         self.assertTrue(result['wechat'][0]['active'])

@@ -2,7 +2,7 @@
   "schema": 1,
   "project_version": "0.1.0",
   "platform": "linux/amd64",
-  "base_image": "ghcr.io/nickrunning/wechat-selkies:0.0.14-minimal@sha256:32b9094316b0bd267dc7d1778116a91a6a349fce20bb8dd652dbb9b38e0ef6ee",
+  "base_image": "ghcr.io/linuxserver/baseimage-selkies:debiantrixie@sha256:5b3f10459933740554081efbca9c8d5e006faf5116b54ab40b7bfad7c8111849",
   "wechat": {
     "version": "4.1.13.23",
     "filename": "wechat.deb",
@@ -10,12 +10,15 @@
     "url": "https://github.com/fliaping/weharbor/releases/download/component-assets/WeChatLinux_4.1.13.23_amd64.deb",
     "sha256": "b7d0f8d53e9f648bc2c77a6096a04100d008f2d9f0d3988a2a4859b5992aca0a"
   },
-  "weflow": {
-    "version": "6.3.2",
-    "filename": "weflow.tar.gz",
-    "original_filename": "WeFlow-6.3.2-Setup.tar.gz",
-    "url": "https://github.com/fliaping/weharbor/releases/download/component-assets/WeFlow-6.3.2-Setup.tar.gz",
-    "sha256": "7cd7b930725200951190eb7357b3e8b4494290a7ad68ce1e541a667fc1c65c70",
-    "asar_sha256": "7e1b81c18e1ad18185e778e0603c1ade145f33ba2bcb668f12f2f025cb6d1ecf"
+  "selkies": {
+    "version": "2.0.0",
+    "note": "bundled by the LinuxServer.io baseimage-selkies debiantrixie image"
+  },
+  "alpha": {
+    "version": "0.2.0",
+    "filename": "alpha.deb",
+    "original_filename": "Alpha-0.2.0-x64.deb",
+    "url": "https://github.com/xunchahaha/alpha-releases/releases/download/v0.2.0/Alpha-0.2.0-x64.deb",
+    "sha256": "9d79a56b88981c496818d93600698d11f8e21d759381c66c3fec3a10b38980d6"
   }
 }

@@ -29,13 +29,13 @@ class AssetTests(unittest.TestCase):
     def test_verified_cache_works_offline(self):
         (self.directory / self.config['filename']).write_bytes(self.data)
         with patch.object(assets.urllib.request, 'urlopen', side_effect=AssertionError('must stay offline')):
-            assets.prepare('weflow', self.config, self.directory)
+            assets.prepare('alpha', self.config, self.directory)
 
     def test_corrupted_cache_is_rejected(self):
         destination = self.directory / self.config['filename']
         destination.write_bytes(b'corrupt')
         with self.assertRaisesRegex(ValueError, 'SHA256 mismatch'):
-            assets.prepare('weflow', self.config, self.directory)
+            assets.prepare('alpha', self.config, self.directory)
         self.assertEqual(destination.read_bytes(), b'corrupt')
 
     def test_wrong_download_is_never_cached(self):
@@ -43,27 +43,27 @@ class AssetTests(unittest.TestCase):
         response.geturl = lambda: self.config['url']
         with patch.dict(os.environ, {}, clear=True), patch.object(assets.urllib.request, 'urlopen', return_value=response):
             with self.assertRaisesRegex(ValueError, 'SHA256 mismatch'):
-                assets.prepare('weflow', self.config, self.directory)
+                assets.prepare('alpha', self.config, self.directory)
         self.assertEqual(list(self.directory.iterdir()), [])
 
     def test_valid_download_is_cached(self):
         response = BytesIO(self.data)
         response.geturl = lambda: self.config['url']
         with patch.dict(os.environ, {}, clear=True), patch.object(assets.urllib.request, 'urlopen', return_value=response):
-            assets.prepare('weflow', self.config, self.directory)
+            assets.prepare('alpha', self.config, self.directory)
         self.assertEqual((self.directory / self.config['filename']).read_bytes(), self.data)
 
     def test_missing_source_fails_with_instructions(self):
         self.config['url'] = None
         with patch.dict(os.environ, {}, clear=True):
-            with self.assertRaisesRegex(ValueError, 'WEFLOW_DOWNLOAD_URL'):
-                assets.prepare('weflow', self.config, self.directory)
+            with self.assertRaisesRegex(ValueError, 'ALPHA_DOWNLOAD_URL'):
+                assets.prepare('alpha', self.config, self.directory)
 
     def test_http_source_is_rejected(self):
         self.config['url'] = 'http://example.invalid/package.tar.gz'
         with patch.dict(os.environ, {}, clear=True):
             with self.assertRaisesRegex(ValueError, 'HTTPS'):
-                assets.prepare('weflow', self.config, self.directory)
+                assets.prepare('alpha', self.config, self.directory)
 
 
 class InitializationTests(unittest.TestCase):

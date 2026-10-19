@@ -1,7 +1,7 @@
 # API notes
 
-Endpoint definitions: [upstream HTTP API documentation](https://github.com/hicccc77/WeFlow/blob/837697ba26605152f216bd5ffc5e9d61aa9f2907/docs/HTTP-API.md).
-WeHarbor pins WeFlow 6.3.2; upstream documentation can include newer optional
+Endpoint definitions: [upstream HTTP API documentation](https://github.com/hicccc77/Alpha/blob/837697ba26605152f216bd5ffc5e9d61aa9f2907/docs/HTTP-API.md).
+WeHarbor pins Alpha 6.3.2; upstream documentation can include newer optional
 features. A 404 should be reported as unsupported, not silently replaced by
 another operation. The helper uses GET and Bearer authentication, including SSE.
 
@@ -26,7 +26,7 @@ For messages and timeline filters, use YYYYMMDD or Unix timestamps. The helper
 normalizes ten-digit Unix seconds to milliseconds for compatibility with older
 message-filter builds, and preserves thirteen-digit milliseconds. Returned
 createTime and SSE timestamp are normally seconds. Date-only filters use the
-WeFlow host's timezone; date-only end includes that whole day. Confirm the user's
+Alpha host's timezone; date-only end includes that whole day. Confirm the user's
 timezone before computing a window (WeHarbor's default is Asia/Shanghai).
 
 If an expected timestamp query is empty, retry the surrounding YYYYMMDD window,
@@ -35,8 +35,8 @@ Do not summarize the broader window without that filtering. Dates must be valid;
 other time string formats are rejected by the helper.
 
 ~~~bash
-python3 <skill-dir>/scripts/weflow_api.py messages --talker example@chatroom --start 20261001 --end 20261007 --limit 100 --offset 0
-python3 <skill-dir>/scripts/weflow_api.py chatlab-messages --session-id example@chatroom --since 1790812800 --limit 100
+python3 <skill-dir>/scripts/alpha_api.py messages --talker example@chatroom --start 20261001 --end 20261007 --limit 100 --offset 0
+python3 <skill-dir>/scripts/alpha_api.py chatlab-messages --session-id example@chatroom --since 1790812800 --limit 100
 ~~~
 
 Follow hasMore for ordinary messages. ChatLab uses sync.hasMore, nextOffset and
@@ -46,7 +46,7 @@ results. There is no unlimited automatic history crawl.
 
 ## Media and streaming
 
-messages --media asks WeFlow to export media files, which can write its local
+messages --media asks Alpha to export media files, which can write its local
 media cache. Only enable this when attachments are needed. Take the relative
 path following /api/v1/media/ from a returned mediaUrl; pass it to media with
 --output. The helper sends authentication only to the configured API base,

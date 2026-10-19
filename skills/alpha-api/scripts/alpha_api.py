@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dependency-free CLI for a configured WeFlow HTTP API."""
+"""Dependency-free CLI for a configured Alpha HTTP API."""
 from __future__ import annotations
 
 import argparse
@@ -67,7 +67,7 @@ class Client:
 
     def open(self, path, params=None, *, auth=True, stream=False, last_event_id=None, timeout=None):
         if auth and not self.token:
-            raise APIError('Set WEFLOW_API_TOKEN or WEFLOW_API_TOKEN_FILE locally')
+            raise APIError('Set ALPHA_API_TOKEN or ALPHA_API_TOKEN_FILE locally')
         url = self.base + path
         query = {key: value for key, value in (params or {}).items() if value is not None}
         if query:
@@ -83,8 +83,8 @@ class Client:
         except urllib.error.HTTPError as error:
             error.close()
             advice = {401: 'Check the API token locally', 403: 'Check API access permissions',
-                      404: 'Check the API base and whether this WeFlow version supports the endpoint'}
-            raise APIError(f'HTTP {error.code}. ' + advice.get(error.code, 'API request failed; inspect WeFlow locally')) from None
+                      404: 'Check the API base and whether this Alpha version supports the endpoint'}
+            raise APIError(f'HTTP {error.code}. ' + advice.get(error.code, 'API request failed; inspect Alpha locally')) from None
         except (urllib.error.URLError, OSError, ValueError):
             raise APIError('Cannot connect to the configured API; check address, service and network') from None
 
@@ -95,17 +95,17 @@ class Client:
             except (ValueError, UnicodeError):
                 raise APIError('API returned invalid JSON') from None
         if isinstance(result, dict) and result.get('success') is False:
-            raise APIError('API reported failure; inspect account/database configuration in WeFlow')
+            raise APIError('API reported failure; inspect account/database configuration in Alpha')
         return result
 
 
 def read_token():
-    token = os.environ.get('WEFLOW_API_TOKEN', '').strip()
-    if not token and os.environ.get('WEFLOW_API_TOKEN_FILE'):
+    token = os.environ.get('ALPHA_API_TOKEN', '').strip()
+    if not token and os.environ.get('ALPHA_API_TOKEN_FILE'):
         try:
-            token = Path(os.environ['WEFLOW_API_TOKEN_FILE']).read_text().strip()
+            token = Path(os.environ['ALPHA_API_TOKEN_FILE']).read_text().strip()
         except (OSError, UnicodeError):
-            raise APIError('Cannot read WEFLOW_API_TOKEN_FILE') from None
+            raise APIError('Cannot read ALPHA_API_TOKEN_FILE') from None
     if '\r' in token or '\n' in token:
         raise APIError('API token must be a single line')
     return token
@@ -155,7 +155,7 @@ def sse_events(response, duration, max_events):
 
 def parser():
     root = argparse.ArgumentParser(description=__doc__)
-    root.add_argument('--base', default=os.environ.get('WEFLOW_API_BASE', 'http://127.0.0.1:5031'))
+    root.add_argument('--base', default=os.environ.get('ALPHA_API_BASE', 'http://127.0.0.1:5031'))
     root.add_argument('--timeout', type=positive, default=30)
     sub = root.add_subparsers(dest='command', required=True)
     sub.add_parser('health')
@@ -209,7 +209,7 @@ def run(args):
     if command == 'health':
         result = client.get('/health', auth=False)
         if not isinstance(result, dict) or result.get('status') != 'ok':
-            raise APIError('WeFlow health is not ok')
+            raise APIError('Alpha health is not ok')
     elif command == 'sse':
         try:
             with client.open('/api/v1/push/messages', stream=True,

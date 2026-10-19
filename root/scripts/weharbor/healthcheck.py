@@ -6,7 +6,6 @@ import os
 import subprocess
 import sys
 import urllib.request
-from pathlib import Path
 
 
 def enabled(name):
@@ -24,8 +23,8 @@ def get(url, authenticated=False):
 
 def main():
     get('http://127.0.0.1:3000/', authenticated=True)
-    if enabled('AUTO_START_WEFLOW'):
-        subprocess.run(['pgrep', '-x', 'weflow'], check=True, stdout=subprocess.DEVNULL)
+    if enabled('AUTO_START_ALPHA'):
+        subprocess.run(['pgrep', '-x', 'alpha'], check=True, stdout=subprocess.DEVNULL)
     if enabled('AUTO_START_WECHAT'):
         subprocess.run(['pgrep', '-x', 'wechat'], check=True, stdout=subprocess.DEVNULL)
     if enabled('ENABLE_APP_SWITCHER') and os.environ.get('APP_SWITCHER_MODE', 'web') == 'desktop':
@@ -36,20 +35,22 @@ def main():
         raise ValueError('Application/notification bridge is not healthy')
     if enabled('ENABLE_APP_SWITCHER'):
         apps = json.loads(get('http://127.0.0.1:8765/apps'))
-        if not all(name in apps for name in ('wechat', 'weflow')):
+        if not all(name in apps for name in ('wechat', 'alpha')):
             raise ValueError('Application controls are not healthy')
         if os.environ.get('APP_SWITCHER_MODE', 'web') != 'desktop':
             script = get('http://127.0.0.1:3000/weharbor-apps.js', authenticated=True)
             if b'weharbor-apps-button' not in script:
                 raise ValueError('Web application controls are not available')
-    # The API is optional on first launch. If explicitly enabled, check it too.
-    config_path = Path('/config/.config/weflow/WeFlow-config.json')
-    if enabled('AUTO_START_WEFLOW') and config_path.exists():
-        config = json.loads(config_path.read_text())
-        if config.get('httpApiEnabled'):
-            port = int(config.get('httpApiPort', 5031))
-            if json.loads(get(f'http://127.0.0.1:{port}/health')).get('status') != 'ok':
-                raise ValueError('WeFlow API is not healthy')
+    # Alpha's API is optional on first launch. /health needs no token, so
+    # check it whenever the listener is up (the user enabled it in Alpha).
+    if enabled('AUTO_START_ALPHA'):
+        port = int(os.environ.get('ALPHA_API_PORT', '5031'))
+        try:
+            body = get(f'http://127.0.0.1:{port}/health')
+        except OSError:
+            body = None
+        if body is not None and not body.strip():
+            raise ValueError('Alpha API is not healthy')
     print('WeHarbor: healthy')
 
 
