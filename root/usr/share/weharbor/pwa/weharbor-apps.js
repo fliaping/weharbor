@@ -17,6 +17,15 @@
       #weharbor-apps-button:hover,#weharbor-apps-button:focus-visible{background:#527ea7}
       #weharbor-apps-button:focus-visible{outline:2px solid #b9dfff;outline-offset:2px}
       #weharbor-apps-button::after{content:'⋮';font:18px system-ui}
+      #weharbor-apps-button::before{content:'';position:absolute;inset:-4px -17px}
+      #weharbor-workspace-frames{position:fixed;inset:0;z-index:2147482900;background:#f8fafc}
+      #weharbor-workspace-frames[hidden]{display:none}
+      #weharbor-workspace-frames iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#f8fafc}
+      #weharbor-workspace-frames iframe[hidden]{display:none}
+      #weharbor-apps .workspace-views{display:grid;gap:8px;margin-bottom:16px}
+      #weharbor-apps [data-view]{min-height:44px;text-align:left;display:flex;align-items:center;justify-content:space-between}
+      #weharbor-apps [data-view][aria-pressed=true]{border-color:#76c7ab;background:#234c48}
+      #weharbor-apps .workspace-caption{color:#bccddd;font-size:12px;margin:0 0 6px}
       #weharbor-apps{position:fixed;z-index:2147483001;width:min(300px,calc(100vw - 36px));
         max-height:calc(100dvh - 24px);overflow:auto;box-sizing:border-box;padding:16px;
         border:1px solid #38506b;border-radius:14px;background:#101c2df5;color:#edf5fc;
@@ -57,6 +66,13 @@
     panel.setAttribute('aria-labelledby', 'weharbor-apps-title');
     panel.innerHTML = `<header><h2 id="weharbor-apps-title">应用管理</h2>
       <button type="button" data-close aria-label="收起应用管理">×</button></header>
+      <p class="workspace-caption">全屏工作区</p>
+      <nav class="workspace-views" aria-label="工作区切换">
+        <button type="button" data-view="desktop" aria-pressed="true">微信桌面<span>Selkies</span></button>
+        <button type="button" data-view="analysis" aria-pressed="false">数据分析<span>聊天与媒体</span></button>
+        <button type="button" data-view="assistant" aria-pressed="false">DeepSeek 助手<span>AI 对话</span></button>
+        <button type="button" data-view="connections" aria-pressed="false">连接与操作记录<span>网络 · MCP</span></button>
+      </nav>
       <div class="app-row"><button type="button" class="app-switch" data-app="wechat" data-action="switch">
         <span>微信</span><span class="app-status" data-status="wechat">…</span></button>
         <button type="button" data-app="wechat" data-action="restart" title="重启微信" aria-label="重启微信">↻</button></div>
@@ -71,6 +87,43 @@
         <label><input type="checkbox" data-setting="alpha">Alpha 通知</label></div>
       <p class="app-feedback" role="status" aria-live="polite"></p>`;
     const feedback = panel.querySelector('.app-feedback');
+    const frames = document.createElement('div');
+    frames.id = 'weharbor-workspace-frames';
+    frames.hidden = true;
+    const views = {analysis: ['/analysis/', '微信数据分析'], assistant: ['/assistant/', 'DeepSeek 助手'],
+      connections: ['/workspace/', '连接与操作记录']};
+    const showView = (view) => {
+      if (view !== 'desktop' && !views[view]) return;
+      for (const child of [...document.body.children]) {
+        if ([launcher, panel, frames, style].includes(child) || ['SCRIPT', 'STYLE'].includes(child.tagName)) continue;
+        if (view !== 'desktop') {
+          if (!child.hasAttribute('data-weharbor-inert')) {
+            child.dataset.weharborInert = child.inert ? 'true' : 'false';
+            child.inert = true;
+          }
+        } else if (child.hasAttribute('data-weharbor-inert')) {
+          child.inert = child.dataset.weharborInert === 'true';
+          delete child.dataset.weharborInert;
+        }
+      }
+      if (view !== 'desktop' && !frames.querySelector('[data-frame="' + view + '"]')) {
+        const frame = document.createElement('iframe');
+        frame.dataset.frame = view; frame.src = views[view][0]; frame.title = views[view][1];
+        frame.referrerPolicy = 'same-origin';
+        frames.appendChild(frame);
+      }
+      for (const frame of frames.children) frame.hidden = frame.dataset.frame !== view;
+      frames.hidden = view === 'desktop';
+      for (const button of panel.querySelectorAll('[data-view]')) button.setAttribute('aria-pressed', String(button.dataset.view === view));
+      write('weharbor-workspace-view', view);
+      close();
+      if (view !== 'desktop') frames.querySelector('[data-frame="' + view + '"]').focus();
+      else launcher.focus();
+    };
+    panel.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-view]');
+      if (button) showView(button.dataset.view);
+    });
     let busy = false, refreshing = false, timer = null, drag = null, suppressClick = false;
     let status = {}, settings = {}, notificationAvailable = false;
     const position = () => {
@@ -167,6 +220,7 @@
           button.dataset.windowId ? {windowId: Number(button.dataset.windowId)} : {});
         feedback.textContent = name + (action === 'restart' ? '已重新启动。' : '已切换。');
         if (action === 'switch') {
+          showView('desktop');
           if (result.windowId) { close(); document.activeElement?.blur(); }
           else feedback.textContent = name + '正在准备窗口，窗口出现后请再次点击。';
         }
@@ -225,8 +279,9 @@
         element.addEventListener(type, (event) => event.stopPropagation());
       }
     }
-    document.body.append(launcher, panel);
+    document.body.append(frames, launcher, panel);
     position();
+    showView(read('weharbor-workspace-view', 'desktop'));
     addEventListener('resize', position);
     request('config').then((config) => {
       if (config.appSwitcherEnabled === false) { close(); launcher.hidden = true; }

@@ -3,6 +3,17 @@
 # init-selkies-config copies /defaults only when a file is missing, so legacy
 # autostart and menu entries would otherwise keep calling removed scripts.
 conf="${HOME:-/config}/.config/openbox"
+for directory in /config/.local/share/weharbor/analysis /config/.local/share/weharbor/workspace \
+    /config/.local/share/weharbor/harness /config/.local/share/weharbor/assistant-workspace \
+    /config/.config/weharbor; do
+    mkdir -p "${directory}"
+    chown abc:abc "${directory}"
+    chmod 0700 "${directory}"
+done
+skill_root=/config/.local/share/weharbor/assistant-workspace/.agents/skills
+mkdir -p "${skill_root}"
+ln -sfn /usr/share/weharbor/skills/weharbor-api "${skill_root}/weharbor-api"
+chown -R abc:abc /config/.local/share/weharbor/assistant-workspace/.agents
 stamp="$(date +%Y%m%d%H%M%S)"
 for name in autostart menu.xml; do
     file="${conf}/${name}"

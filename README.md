@@ -12,6 +12,11 @@ Selkies 2.0 基础镜像（Debian trixie），把官方 Linux 微信和 Alpha �
 [安装为桌面应用](docs/pwa.md) ·
 [组件许可](THIRD_PARTY_NOTICES.md)
 
+集成工作区开发版：边缘挂件可全屏切换桌面、Linux 聊天分析、DeepSeek
+Harness 和连接设置。支持已有 WeFlow 密钥、数据库/WAL 与图片解密、
+独立 MCP/Skill，以及带回执的桌面 Action。配置和限制见
+[工作区说明](docs/workspace.md)。
+
 ## 当前状态
 
 源码版本 0.1.0，仓库为 [fliaping/weharbor](https://github.com/fliaping/weharbor)。
@@ -51,7 +56,7 @@ cd weharbor
 docker compose up -d
 ~~~
 
-build.sh 会下载并校验两个锁定版本的安装包。离线构建可提前把
+build.sh 会下载并校验 versions.lock.json 中锁定的组件。离线构建可提前把
 Alpha-0.2.0-x64.deb 放到 downloads/alpha.deb，把
 WeChatLinux_4.1.13.23_amd64.deb 放到 downloads/wechat.deb。
 

@@ -12,3 +12,5 @@ __pycache__/
 *.AppImage
 *.pem
 *.key
+node_modules/
+.output/

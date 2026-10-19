@@ -10,6 +10,31 @@
     "url": "https://github.com/fliaping/weharbor/releases/download/component-assets/WeChatLinux_4.1.13.23_amd64.deb",
     "sha256": "b7d0f8d53e9f648bc2c77a6096a04100d008f2d9f0d3988a2a4859b5992aca0a"
   },
+  "analysis": {
+    "version": "28ef68958969cd1cd7b50f49a7f03e8737ca6ee5",
+    "filename": "analysis.tar.gz",
+    "url": "https://codeload.github.com/fliaping/WeChatDataAnalysis/tar.gz/28ef68958969cd1cd7b50f49a7f03e8737ca6ee5",
+    "sha256": "60519777d448c97d4a5b89990e28de5ad8ca98dbc65b4b8b00d7e662723984ae"
+  },
+  "node": {
+    "version": "24.16.0",
+    "filename": "node.tar.xz",
+    "url": "https://nodejs.org/dist/v24.16.0/node-v24.16.0-linux-x64.tar.xz",
+    "sha256": "d804845d34eddc21dc1092b519d643ef40b1f58ec5dec5c22b1f4bd8fabde6c9"
+  },
+  "tailscale": {
+    "version": "1.104.1",
+    "filename": "tailscale.tgz",
+    "url": "https://pkgs.tailscale.com/stable/tailscale_1.104.1_amd64.tgz",
+    "sha256": "108d1d96ecf410d305571e173516f27038f870919a9b89c914a167c6d33a4528"
+  },
+  "cloudflared": {
+    "version": "2026.10.1",
+    "filename": "cloudflared",
+    "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.10.1/cloudflared-linux-amd64",
+    "sha256": "3bfc539f45d2620c71debb7a86be0efa737ed5ccbad9eb85c787116900e5c586"
+  },
+  "harness": {"version": "0.1.1-rc.2", "package": "@deepseek-ai/dsh", "integrity": "runtime/harness/package-lock.json"},
   "selkies": {
     "version": "2.0.0",
     "note": "bundled by the LinuxServer.io baseimage-selkies debiantrixie image"

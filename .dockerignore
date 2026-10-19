@@ -12,3 +12,14 @@ scripts/*
 downloads/*
 !downloads/alpha.deb
 !downloads/wechat.deb
+!downloads/analysis.tar.gz
+!downloads/node.tar.xz
+!downloads/tailscale.tgz
+!downloads/cloudflared
+!runtime/
+!runtime/harness/
+!runtime/harness/package.json
+!runtime/harness/package-lock.json
+!skills/
+!skills/weharbor-api/
+!skills/weharbor-api/**
