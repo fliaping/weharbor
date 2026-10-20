@@ -221,6 +221,13 @@ with urllib.request.urlopen(request, timeout=5) as response:
 assert len(tools) == 14
 assert {'wechat_open_chat', 'wechat_desktop_status'} <= {t['name'] for t in tools}
 print('Authenticated MCP exposes fourteen tools, including navigation and readiness')
+request = urllib.request.Request('http://127.0.0.1:8766/desktop/status',
+    headers={'Authorization':'Bearer ' + token})
+with urllib.request.urlopen(request, timeout=30) as response:
+    readiness = json.load(response)
+assert readiness['state'] == 'blocked', 'A fresh logged-out profile cannot be ready'
+assert readiness['code'] and readiness['recovery'] and isinstance(readiness['retryable'], bool)
+print('Fresh-profile desktop readiness reports a structured blocker')
 identity = subprocess.run(['s6-setuidgid', 'abc', 'sudo', '-n',
     '/usr/local/bin/weharbor-capture-key'], input=json.dumps(
         {'mode': 'session', 'account': 'synthetic'}),

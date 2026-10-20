@@ -38,7 +38,7 @@
     }
     const ts = data.network.tailscale, cf = data.network.cloudflare;
     badge('ts-state', !ts.installed ? '未安装' : ts.state === 'Running' ? '已连接' : ts.state || '未连接', ts.state === 'Running');
-    $('ts-ips').textContent = ts.ips.join(' · '); $('ts-login').disabled = !ts.installed;
+    $('ts-ips').textContent = (Array.isArray(ts.ips) ? ts.ips : []).join(' · '); $('ts-login').disabled = !ts.installed;
     badge('cf-state', !cf.installed ? '未安装' : cf.running ? '连接进程运行中' : cf.configured ? '已配置 · 未运行' : '未配置', cf.running);
     $('cf-open').disabled = !cf.installed;
     $('actions').replaceChildren();

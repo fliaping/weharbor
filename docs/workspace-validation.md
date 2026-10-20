@@ -7,7 +7,7 @@ not committed. The preceding baseline image was
 
 ## October 20 navigation and recovery validation
 
-- Passed 117 integration/source tests, covering exact-result navigation, duplicate
+- Passed 118 integration/source tests, covering exact-result navigation, duplicate
   titles, exclusion of history/message results, draft and manual-search
   preservation, structured recovery, pre-input retry, context cancellation,
   expiration during navigation and no retry after attempted composer writes.
@@ -20,6 +20,16 @@ not committed. The preceding baseline image was
   exact-target navigation. Scheduled transient pre-input failures may recover
   for at most five minutes after due time; changed context cancels the action.
   Expiry is checked again before editor writes and submission.
+- Authenticated HTTP and MCP both navigated to the exact target. Missing
+  authentication, foreign origins and invalid request schemas were rejected.
+  Two synthetic operations were prepared and cancelled without submitting;
+  replaying a cancelled commit kept it cancelled, and the composer stayed empty.
+  The assistant workspace resolves the updated portable Skill from its source.
+- The production workspace was updated in place while retaining the unlocked
+  original WeChat process. Browser checks at 1280px and 390px confirmed ready
+  status and no page overflow; the action table scrolls inside its card. An
+  unauthenticated Tailscale daemon can return null IPs; both the status response
+  and UI now handle that state without interrupting action-list rendering.
 
 ## October 20 unlocked-chat validation
 

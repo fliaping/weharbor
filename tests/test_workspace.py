@@ -291,6 +291,17 @@ class ReaderTransportTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.requests), 1)
         self.assertEqual(str(self.requests[0].url), reader.LOCAL + '/api/linux/sync')
 
+class NetworkStatusTests(unittest.IsolatedAsyncioTestCase):
+    async def test_logged_out_tailscale_null_ips_is_an_empty_list(self):
+        import network
+        from unittest.mock import AsyncMock
+        with patch.object(network, 'SOCKET', SimpleNamespace(exists=lambda:True)):
+            with patch.object(network.Path, 'is_file', return_value=True), patch.object(network.Network, 'command',
+                    new=AsyncMock(return_value=(0,json.dumps({'BackendState':'NeedsLogin','TailscaleIPs':None}),''))):
+                result=await network.Network().status()
+        self.assertEqual(result['tailscale']['ips'], [])
+        self.assertEqual(result['tailscale']['state'], 'NeedsLogin')
+
 class McpTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.directory = tempfile.TemporaryDirectory()
