@@ -18,6 +18,21 @@ Frontend validation passed 66 Node tests, 116 Vitest tests and a production
 static build under `/analysis/`. A fresh browser rendered the hydrated home
 and advanced pages without the agreement overlay; the legacy agreement URL
 returned to the home page. WeHarbor source validation passed all 162 tests.
+The same browser checks passed with local storage disabled, after waiting
+22 seconds and after refreshing the advanced page.
+
+Image `weharbor:agreement-fix-20261020` was built from WeHarbor revision
+`918373d1aa688dce632467b574f4a18b592cf86a`; its image ID is
+`sha256:f10ac03e24189b74ad5412036aa83a1c2107b64b82c9b64de936813bde43242c`.
+Full fresh-profile smoke passed, including browser authentication, both MCP
+inventories, Harness Skill discovery and repeatable restart.
+NAS deployment used the same image ID and preserved the existing profile mount
+and port bindings after a stopped-profile backup. Health, five authenticated
+pages, both MCP inventories, both Harness plugins and Skills, and Linux snapshot
+SSE passed. The existing account remains present. A fresh authenticated browser
+entered the home page directly; the legacy agreement URL reached chat. Waiting
+22 seconds and refreshing the advanced page left it usable without any notice,
+countdown or first-use overlay. No message was sent or automation activated.
 
 ## October 20 unified build
 
