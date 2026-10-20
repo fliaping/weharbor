@@ -89,9 +89,9 @@ An immediate action retains its original 120-second lifetime. Context changes
 cancel execution, and any failure after an attempted composer write prevents
 automatic retry. Submitted or uncertain actions are never retried.
 
-The 35 WeHarbor MCP tools include read-only `wechat_desktop_status` and
-`wechat_open_chat`, which opens an exact account/username without typing a
-message. The Connections page shows desktop readiness, recovery instructions
+The 35 WeHarbor MCP tools include `wechat_desktop_status` for read-only readiness
+checks and `wechat_open_chat` for exact account/username navigation without typing
+a message. The Connections page shows desktop readiness, recovery instructions
 and blocked action reasons, with bounded retry and cancellation controls.
 Navigation uses only exact labels in accessible Contacts/Groups search results,
 never history results. It checks active X11 geometry before clicking and verifies

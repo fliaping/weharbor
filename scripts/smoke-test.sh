@@ -140,8 +140,8 @@ def harness_rpc(method, payload):
         assert result['ok'] is True, result
         return result['value']
 # A local empty session exercises official Skill discovery without a model call.
-session = harness_rpc('session.create', {'cwd':'/config/.local/share/weharbor/assistant-workspace'})
-skills = harness_rpc('skill.list', {'sessionId':session['sessionId']})['skills']
+session = harness_rpc('session/create', {'args':{'request':{'cwd':'/config/.local/share/weharbor/assistant-workspace'}}})
+skills = harness_rpc('skills/list', {'args':{'request':{'sessionId':session['sessionId']}}})['skills']
 assert any(skill['name'] == 'weharbor-api' and skill['modelInvocable'] for skill in skills), skills
 assert any(skill['name'] == 'wechat-analysis-actions' and skill['modelInvocable'] for skill in skills), skills
 print('Official Harness discovers the WeHarbor action/automation Skill; no model request made')

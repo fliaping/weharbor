@@ -22,7 +22,25 @@ The analysis source is pinned to `d747ca5631031265157b10d6f6a7402a19173aa4`.
   real-account success. No message was sent or task activated during validation.
 - Desktop navigation retains draft protection and exact original-process session
   verification. Mark-read persists its action boundary before selecting a chat.
-- Image smoke and NAS deployment results are recorded after verification.
+- Image: `weharbor:unified-20261020`,
+  `sha256:ca95c2c69cfd11c8601e3f9fb1c2aa87058916290b518a1ec1b9a1a8ebb6ebb1`,
+  built from WeHarbor revision `df9a0f620a352b01cd3493f64f9b3ccfb316ce3b`.
+  The private gzip export is 2,516,228,362 bytes, SHA256
+  `fc546302a73418bcd038f707969ce0dd30590a4d84a6058d607b25b69b949dfc`.
+- Full fresh-profile smoke passed: both MCP inventories, both Harness filesystem
+  Skills and active MCP plugins, private upload streaming, browser authentication,
+  foreign-origin rejection, application switching, structured desktop readiness,
+  original vendor program verification and repeatable container restart.
+  Skill discovery uses the pinned Harness RPC descriptors (`session/create` and
+  `skills/list`, with named `request` arguments). No model request was made.
+- NAS deployment passed with the same image ID. The existing `/config` mount
+  and port bindings were preserved, a full stopped-profile backup was taken,
+  and the preceding image was retained as `weharbor:before-unified-20261020`.
+  Health, all five authenticated pages, both MCP inventories, both active Harness
+  plugins, both discoverable Skills and the Linux snapshot SSE stream passed.
+  The existing account remains present. WeChat currently reports
+  `WECHAT_LOGIN_REQUIRED`; desktop writes require the owner's login or phone
+  confirmation. No message was sent and no automation task was activated.
 
 ## October 20 labels and onboarding build — local, not deployed
 
