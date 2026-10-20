@@ -5,6 +5,47 @@ contains counts and status only; keys, chat contents and account identities are
 not committed. The preceding baseline image was
 `sha256:5e7b6ef5b43e12e135251d23f51076e6b81a540c507a43e2c59584f67ceb5d7c`.
 
+## October 20 unlocked-chat validation
+
+- After the owner unlocked WeChat and selected the authorized one-to-one chat,
+  original-process session proof and the unique database contact title matched.
+  Qt marks both search and composer as multiline, so the driver now selects the
+  unique editor within the titled chat pane. GI text/component/action calls use
+  explicit interface dispatch to avoid Accessible method-name collisions.
+- The installed WeChat paints Send without an AT-SPI button. The driver now
+  recognizes the enabled caption locally with Tesseract, scoped to the right
+  composer toolbar and green button. The two Chinese words scored above 93%
+  in the deployment probe; acceptance requires at least 80% per word. X11/Qt
+  frame geometry corrects the observed 2x DPI scale, and movement cancels clicks.
+- One initial attempt stopped before submission when Send was absent from
+  AT-SPI. Its action remains failed. Recovery checked that failure, exact owned
+  test draft, session identity and visible Send, and cleared only that draft.
+  No mouse send event occurred for that failed attempt.
+- All three authorized marker messages then completed through HTTP prepare and
+  commit. Each has a unique new self-message database receipt and occurs once
+  in the selected chat. Replaying each completed commit kept its sent status
+  and did not add a message. The composer is empty. A mismatched username was
+  rejected by the current-session proof before typing.
+- From observing the persisted submitted state to API visibility, bounded
+  probes measured 1,791 ms, 1,735 ms and 2,082 ms. Polling adds uncertainty of
+  about one 100 ms interval. The first two appeared before the commit receipt's
+  two-second refresh; the third can include that refresh. These are outgoing
+  self-message visibility checks, not independent incoming-message latency,
+  recipient delivery or read receipts.
+- Passed 98 integration/source tests, including low-confidence or incorrect
+  Send captions and cancellation before all mouse events when a window moves.
+  Image `sha256:cd573b40b1a19509e0a78397d9cdc479f86cd72aa1453e2b7ed1e5712661515e`
+  was built from application revision `22b9f4b2c4b42c1dc294c39ea588d19dc5be8e87`.
+  Its local fresh-profile smoke test passed, including restart, authentication,
+  MCP discovery, app switching and unchanged original vendor package files.
+  The image's English and Simplified Chinese OCR data are installed.
+- The production driver was updated in place and only the workspace service
+  restarted, preserving the unlocked WeChat process. The running container
+  remains based on image `b8fa1b571a93`; its two driver source hashes and OCR
+  dependencies match the new image. The full new image was loaded on the NAS
+  and `compose.workspace.yml` now selects `weharbor:realtime-20261020-qt` for
+  the next recreation. No container recreation occurred in this validation.
+
 ## October 20 event-sync and Harness update
 
 - Analysis fork pinned to `f9be0a3a1bd0e9abfff5d1563ea29dbb35f28b24`: Linux
@@ -46,9 +87,8 @@ not committed. The preceding baseline image was
   component version match is eligible; unsupported layouts fail closed. Live
   QObject ownership, unique page, stable reads, account, username and visible
   title are checked before UI actions.
-- The production desktop still asks for phone confirmation and exposes no
-  Send control. No test message has been sent. Real delivery and newly received
-  message latency require an unlocked account and the selected authorized chat.
+- At the earlier image rollout the desktop asked for phone confirmation. The
+  later unlocked-chat results above supersede that pending send check.
 
 ## October 20 earlier baseline
 
@@ -111,12 +151,10 @@ The previous image remains tagged locally as `weharbor:before-realtime-20261020`
 
 ## Pending deployment checks
 
-The running desktop exposes 169 accessibility nodes and asks for phone
-confirmation. No real message was prepared or sent. The independent AT-SPI
-driver still needs validation against a logged-in real chat, with an explicitly
-authorized recipient and text. It currently requires that target chat to be
-selected; it does not automatically navigate arbitrary chats or attachments.
-Synthetic receipts do not establish real recipient delivery.
+The driver has now passed the authorized real-chat tests above. It requires
+that target chat to be selected; it does not automatically navigate arbitrary
+chats or attachments. Independent incoming-message latency, recipient delivery
+and read receipts remain unverified.
 
 Model dialogue awaits Harness model credentials. Tailscale login and named
 Cloudflare Tunnel credentials/DNS await the owner's configuration. Their
@@ -138,6 +176,13 @@ The event-sync rollout backup is `event-sync-20261020-064151` under the private
 deployment backup directory. The preceding image remains tagged
 `weharbor:before-fast-sync-20261020`; the intermediate Harness integration
 image is also retained as `weharbor:before-harness-fix-20261020`.
+The Qt Send update backup is `qt-send-20261020-081901` in that directory, with
+the preceding override and a hash-only image/source manifest. Its base image
+is retained as `weharbor:before-qt-send-20261020`. The in-place desktop driver
+backup is `/config/.local/share/weharbor/desktop-before-qt-controls.py` inside
+the production container. Recreating from the selected new image preserves the
+profile volume but restarts WeChat, so it was staged rather than forced while
+the owner's unlocked chat was in use.
 
 No combined image was published. Upstream analysis licensing and the vendor
 redistribution conditions in `THIRD_PARTY_NOTICES.md` still require clarification

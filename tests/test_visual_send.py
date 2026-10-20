@@ -2,6 +2,8 @@ import importlib.util
 import sys
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 path = Path(__file__).resolve().parents[1] / 'root/scripts/workspace/visual_send.py'
 spec = importlib.util.spec_from_file_location('visual_send', path)
@@ -26,3 +28,15 @@ class SendCaptionTests(unittest.TestCase):
             with self.subTest(words=words):
                 self.assertFalse(visual_send.send_label(self.tsv(words)))
         self.assertFalse(visual_send.send_label('invalid'))
+
+    def test_moved_window_prevents_all_mouse_events(self):
+        connection = Mock()
+        xtest = SimpleNamespace(fake_input=Mock())
+        modules = {'Xlib': SimpleNamespace(X=SimpleNamespace(), display=SimpleNamespace(Display=lambda: connection)),
+                   'Xlib.ext': SimpleNamespace(xtest=xtest)}
+        target = visual_send.VisualSend(100, 200, 50, 30, 42, (0, 0, 1200, 800))
+        with patch.dict(sys.modules, modules), patch.object(visual_send, 'active_window', return_value=(42, (50, 0, 1200, 800))):
+            with self.assertRaisesRegex(ValueError, 'moved or changed'):
+                visual_send.click_send(target)
+        xtest.fake_input.assert_not_called()
+        connection.close.assert_called_once()
