@@ -27,7 +27,7 @@ RUN npm ci --no-audit --no-fund \
     && rm -rf /opt/weharbor/analysis/frontend /opt/weharbor/analysis/data /opt/weharbor/analysis/output /opt/weharbor/analysis/.git
 COPY runtime/harness/package*.json /opt/weharbor/harness/
 WORKDIR /opt/weharbor/harness
-RUN npm ci --legacy-peer-deps --omit=dev --no-audit --no-fund \
+RUN npm ci --omit=dev --no-audit --no-fund \
     && node node_modules/@deepseek-ai/dsh-subprocess-local/scripts/ensure-spawn-helper.mjs \
     && node -e "require('node-pty'); require('koffi')"
 

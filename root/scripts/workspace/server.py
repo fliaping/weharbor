@@ -41,22 +41,13 @@ async def lifespan(app):
             await asyncio.sleep(30)
             await network.start()
     connector = asyncio.create_task(reconnect())
-    async def refresh_local():
-        while True:
-            try:
-                await reader.sync()
-            except Exception:
-                pass
-            await asyncio.sleep(30)
-    refresh = asyncio.create_task(refresh_local())
+    # The analysis service owns its DB/WAL watcher and bounded fallback.
+    # Starting a second polling loop here duplicates expensive decryptions.
     yield
     task.cancel()
-    refresh.cancel()
     connector.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await task
-    with contextlib.suppress(asyncio.CancelledError):
-        await refresh
     with contextlib.suppress(asyncio.CancelledError):
         await connector
     await network.close()

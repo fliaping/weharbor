@@ -1,5 +1,7 @@
 """Independent AT-SPI WeChat driver. No app patching or proprietary offsets."""
 import os
+import json
+import subprocess
 import time
 from pathlib import Path
 
@@ -86,6 +88,19 @@ class Desktop:
             queue.extend(n.get_child_at_index(i) for i in range(min(n.get_child_count(), 300)))
         return subtree
 
+    def _identity(self, binding):
+        try:
+            result = subprocess.run(
+                ['sudo', '-n', '/usr/local/bin/weharbor-capture-key'],
+                input=json.dumps({'mode': 'session', 'account': binding['account']}),
+                text=True, capture_output=True, check=True, timeout=20)
+            evidence = json.loads(result.stdout)
+        except (OSError, subprocess.SubprocessError, ValueError):
+            raise DesktopError('CHAT_IDENTITY_UNAVAILABLE: current-session memory could not be verified') from None
+        if (not isinstance(evidence, dict) or evidence.get('verified') is not True or evidence.get('account') != binding['account']
+                or evidence.get('username') != binding['username']):
+            raise DesktopError('CHAT_IDENTITY_UNVERIFIED: unlock WeChat and open the exact target chat')
+
     def _controls(self, binding):
         self._account(binding['account'])
         nodes = self.nodes()
@@ -95,9 +110,10 @@ class Desktop:
         sends = [n for n in nodes if n.get_name() in ['发送', 'Send'] and n.get_role_name() in ['button', 'push button'] and self._visible(n)]
         if len(editors) != 1 or len(sends) != 1:
             raise DesktopError('CHAT_CONTROLS_AMBIGUOUS')
+        self._identity(binding)
         # Use the chat pane containing the editor, not the contact sidebar or
-        # invisible cached Qt widgets. DB uniqueness plus visible message
-        # fingerprints bind a display name to the exact database username.
+        # invisible cached Qt widgets. The read-only Qt session identity must
+        # match the exact account/username as well as a unique visible DB title.
         pane = editors[0].get_parent()
         for _ in range(8):
             if pane is None or pane.get_role_name() in ['application', 'frame']:
@@ -105,13 +121,11 @@ class Desktop:
             subtree = self._subtree(pane)
             names = {n.get_name().strip() for n in subtree if self._visible(n) and n.get_name()}
             title = any(name in names for name in binding['names'])
-            identity = any(v and (v in names or '微信号：'+v in names or 'WeChat ID: '+v in names) for v in [binding['username'], binding.get('alias')])
-            fingerprints = sum(text in names for text in binding['messages'])
-            if sends[0] in subtree and title and (identity or fingerprints >= 2):
+            if sends[0] in subtree and title:
                 self._foreground(editors[0])
                 return editors[0], sends[0]
             pane = pane.get_parent()
-        raise DesktopError('CHAT_IDENTITY_UNVERIFIED: open the target chat; a unique contact title and exact ID or two matching recent messages are required')
+        raise DesktopError('CHAT_IDENTITY_UNVERIFIED: the verified session needs its unique contact title in the visible chat pane')
 
     def _foreground(self, editor):
         from Xlib import X, display

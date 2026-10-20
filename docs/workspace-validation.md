@@ -2,10 +2,34 @@
 
 Validated on an amd64 Linux NAS with an existing WeHarbor profile. Test output
 contains counts and status only; keys, chat contents and account identities are
-not committed. The locally deployed image is
+not committed. The preceding baseline image was
 `sha256:5e7b6ef5b43e12e135251d23f51076e6b81a540c507a43e2c59584f67ceb5d7c`.
 
-## October 20 update
+## October 20 event-sync and Harness update
+
+- Analysis fork pinned to `fd61b10d24ba2aaabc08f39f53a2cbb7486668cd`: Linux
+  DB/WAL notifications debounce for 150 ms, with a two-second fallback scan.
+  Revision SSE checks run every 200 ms. The target is 1–3 seconds after a
+  stable database write; decryption duration still limits actual latency.
+- Passed 69 targeted analysis tests and 91 integration/source tests. The
+  filesystem test exercises writes and rename replacement, while existing
+  tests cover authenticated decryption, WAL recovery and publication failures.
+- DSH `0.2.1-rc.2` was the official npm latest on October 20, 2026. A fresh
+  local DSH profile successfully initialized the NAS MCP server and discovered
+  twelve tools, including send preparation. No tool call or model request was
+  made. The proxy now supports signed browser sessions, scoped cookies and
+  the current settings RPC while preserving foreign-origin rejection.
+- Current-chat proof derives the session-name field from the installed
+  original WeChat ELF metadata and handler code. It reads process memory
+  without attaching a debugger or writing memory. Only an exact first-two-
+  component version match is eligible; unsupported layouts fail closed. Live
+  QObject ownership, unique page, stable reads, account, username and visible
+  title are checked before UI actions.
+- The production desktop still asks for phone confirmation and exposes no
+  Send control. No test message has been sent. Real delivery and newly received
+  message latency require an unlocked account and the selected authorized chat.
+
+## October 20 earlier baseline
 
 - Analysis fork pinned to `9ba2b71dc1b8018ab7feb59b028713beeb314f1b`.
   Linux snapshots publish revisions only after validated database replacement;

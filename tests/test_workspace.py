@@ -260,17 +260,22 @@ class DesktopIdentityTests(unittest.TestCase):
         n = self.Node
         editor = n(states=['show','edit','multi'])
         send = n('Send', 'button', ['show'])
-        evidence = [n('Unique Contact', states=['show'])] + [n(v, states=['show'] if visible else []) for v in fingerprints]
+        evidence = [n('Unique Contact', states=['show'] if visible else [])] + [n(v, states=['show'] if visible else []) for v in fingerprints]
         chat = n(role='panel', children=[editor, send] + ([] if sidebar else evidence))
         frame = n(role='frame', children=[chat] + (evidence if sidebar else []))
         d = object.__new__(desktop.Desktop)
         d.a = SimpleNamespace(StateType=SimpleNamespace(EDITABLE='edit', MULTI_LINE='multi', SHOWING='show'))
         d.nodes = lambda: d._subtree(frame)
         d._account = lambda account: None
+        d._identity = lambda binding: None
         d._foreground = lambda editor: None
         return d
-    def test_only_visible_chat_evidence_proves_identity(self):
+    def test_visible_unique_title_is_still_required_after_memory_identity(self):
         binding = {'account':'a','username':'wxid_target','names':['Unique Contact'],'messages':['recent message one','recent message two']}
         self.driver(binding['messages'])._controls(binding)
-        for d in [self.driver(binding['messages'], visible=False), self.driver(binding['messages'], sidebar=True), self.driver(['recent message one'])]:
+        self.driver([])._controls(binding)
+        for d in [self.driver(binding['messages'], sidebar=True), self.driver([], visible=False)]:
             with self.assertRaises(desktop.DesktopError): d._controls(binding)
+        driver = self.driver([])
+        driver._identity = lambda _: (_ for _ in ()).throw(desktop.DesktopError('wrong session'))
+        with self.assertRaises(desktop.DesktopError): driver._controls(binding)
