@@ -30,6 +30,21 @@ not committed. The preceding baseline image was
   status and no page overflow; the action table scrolls inside its card. An
   unauthenticated Tailscale daemon can return null IPs; both the status response
   and UI now handle that state without interrupting action-list rendering.
+- Harness was restarted separately to refresh MCP discovery; its plugin inventory
+  reports the WeHarbor MCP plugin active. The original WeChat process was
+  preserved, and no model request was made. Rechecking the three earlier approved
+  sends found each marker exactly once; completed commit replays stayed sent,
+  the composer was empty and a mismatched exact username was rejected.
+- Image `sha256:3d74e20955a0c6349003355451c630859e30eba3172d6d12a8749655088ed332`
+  was built from application revision
+  `c730ca0137289016e5b68efb31ffbad7807b56b5`.
+  Its full fresh-profile smoke test passed, including container restart,
+  authentication, origin rejection, app switching, fourteen MCP tools,
+  structured logged-out readiness, Harness RPC and original vendor file checks.
+- The final image is loaded on the NAS. Nine updated runtime files match its
+  hashes. The persistent override selects `weharbor:realtime-20261020-navigation`
+  for the next recreation. The live container retains base image `b8fa1b571a93`
+  and its original unlocked WeChat process; it was not recreated.
 
 ## October 20 unlocked-chat validation
 
@@ -209,6 +224,16 @@ backup is `/config/.local/share/weharbor/desktop-before-qt-controls.py` inside
 the production container. Recreating from the selected new image preserves the
 profile volume but restarts WeChat, so it was staged rather than forced while
 the owner's unlocked chat was in use.
+
+The later navigation rollout backup is `navigation-20261020-102426` under the
+same private deployment backup directory. It retains the preceding override
+and hash-only manifest. `weharbor:before-navigation-20261020` retains the Qt
+image. The pre-navigation runtime files and private action-database backup are
+inside `/config/.local/share/weharbor/before-navigation-20261020-100304` in the
+production container. A runtime-only rollback should restore the saved program
+files while the workspace service is stopped, then restart that service; do not
+replace the live action database with an older backup. This preserves subsequent
+operation records and the unlocked WeChat session.
 
 No combined image was published. Upstream analysis licensing and the vendor
 redistribution conditions in `THIRD_PARTY_NOTICES.md` still require clarification
