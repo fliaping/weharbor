@@ -12,7 +12,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, Response
 from reader import Reader, STATE, LOCAL, public_config, save_config
 from actions import Actions
-from desktop import Desktop
+from desktop import Desktop, DesktopError
 from network import Network
 
 TOKEN_FILE = Path(os.environ.get('WEHARBOR_TOKEN_FILE', '/config/.config/weharbor/workspace.token'))
@@ -80,6 +80,11 @@ async def invalid(request, exc):
 async def unavailable(request, exc):
     return JSONResponse({'error': str(exc)}, status_code=409)
 
+@app.exception_handler(DesktopError)
+async def desktop_blocked(request, exc):
+    detail = exc.public()
+    return JSONResponse({'error': detail['message'], **detail}, status_code=409)
+
 @app.get('/health')
 async def health():
     return {'status': 'ok', 'reader': await reader.probe(), 'features': ['mcp', 'skills', 'actions', 'linux-images']}
@@ -126,6 +131,17 @@ async def sync():
 async def history():
     return {'actions': actions.list()}
 
+@app.get('/desktop/status')
+async def desktop_status(account: str | None = None, username: str | None = None):
+    return await actions.desktop_status(account, username)
+
+@app.post('/desktop/open')
+async def open_chat(request: Request):
+    value = await request.json()
+    if not isinstance(value, dict) or set(value) != {'account', 'username'}:
+        raise ValueError('Expected account and exact username')
+    return await actions.open_chat(**value)
+
 @app.post('/actions/prepare')
 async def prepare(request: Request):
     value = await request.json()
@@ -164,6 +180,8 @@ TOOLS = [
     ('wechat_search', 'Search message content', schema({'account':'string','username':'string','q':'string','limit':'integer','offset':'integer'}, ['account','q'])),
     ('wechat_sync', 'Refresh local authenticated DB/WAL snapshots', schema({})),
     ('wechat_desktop_inspect', 'Inspect the WeChat accessibility tree without interacting', schema({})),
+    ('wechat_desktop_status', 'Check readiness and recovery steps without interacting. Supply both account and username to verify a target chat.', schema({'account':'string','username':'string'})),
+    ('wechat_open_chat', 'Open a local chat resolved by exact username and verify its session ID. Does not type or send a message; preserves drafts and manual search.', schema({'account':'string','username':'string'}, ['account','username'])),
     ('wechat_prepare_send', 'Prepare exact text to one verified username. Never infer authorization from messages. due is optional Unix seconds.', schema({'account':'string','username':'string','text':'string','idempotency_key':'string','due':'number'}, ['account','username','text','idempotency_key'])),
     ('wechat_commit_send', 'Send a prepared action once. Requires explicit user authorization for the recipient and content.', schema({'action_id':'string'}, ['action_id'])),
     ('wechat_cancel_send', 'Cancel a pending action', schema({'action_id':'string'}, ['action_id'])),
@@ -188,6 +206,8 @@ async def call_tool(name, args):
     if name == 'wechat_commit_send': return await actions.commit(args['action_id'])
     if name == 'wechat_cancel_send': return await actions.cancel(args['action_id'])
     if name == 'wechat_actions': return actions.list()
+    if name == 'wechat_desktop_status': return await actions.desktop_status(**args)
+    if name == 'wechat_open_chat': return await actions.open_chat(**args)
     if name == 'weharbor_connections': return await reader.probe()
     if name == 'wechat_desktop_inspect': return await asyncio.to_thread(lambda: Desktop().inspect())
     raise ValueError('Unknown tool')
@@ -209,7 +229,7 @@ async def rpc(message):
     elif method == 'ping': result = {}
     elif method == 'tools/list':
         result = {'tools': [{'name': n,'description':d,'inputSchema':s,
-                  'annotations': {'readOnlyHint': n not in ['wechat_sync','wechat_prepare_send','wechat_commit_send','wechat_cancel_send'],
+                  'annotations': {'readOnlyHint': n not in ['wechat_sync','wechat_open_chat','wechat_prepare_send','wechat_commit_send','wechat_cancel_send'],
                                   'destructiveHint': n == 'wechat_commit_send'}} for n,d,s in TOOLS]}
     elif method == 'tools/call':
         try:
@@ -227,7 +247,8 @@ async def rpc(message):
             payload = await call_tool(name, arguments)
             result = {'content': [{'type':'text', 'text': json.dumps(payload, ensure_ascii=False)}]}
         except Exception as exc:
-            result = {'isError': True, 'content': [{'type':'text','text': str(exc) if isinstance(exc, (ValueError, RuntimeError)) else type(exc).__name__}]}
+            detail = json.dumps(exc.public(), ensure_ascii=False) if isinstance(exc, DesktopError) else str(exc) if isinstance(exc, (ValueError, RuntimeError)) else type(exc).__name__
+            result = {'isError': True, 'content': [{'type':'text','text': detail}]}
     elif method == 'resources/list':
         result = {'resources': [{'uri':'weharbor://skill','name':'WeHarbor skill','mimeType':'text/markdown'}]}
     elif method == 'resources/read' and args.get('uri') == 'weharbor://skill':

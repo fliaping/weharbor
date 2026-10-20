@@ -76,8 +76,22 @@ WebSocket traffic; the external browser authentication remains required.
 Read, search, summarize and suggest replies use message MCP tools. Sending is a
 separate prepare/commit action with an exact username, idempotency key, context
 revision, desktop checks and persistent receipt. Scheduling uses the same
-checks and requires the selected target chat to remain ready at the due time.
+checks and automatically opens and verifies the exact target at the due time.
 Preparation alone never schedules a send: commit activates a future action.
+Only transient failures before a composer write may wait for recovery; scheduled
+actions retry every five seconds for at most five minutes after their due time.
+An immediate action retains its original 120-second lifetime. Context changes
+cancel execution, and any failure after an attempted composer write prevents
+automatic retry. Submitted or uncertain actions are never retried.
+
+The fourteen MCP tools include read-only `wechat_desktop_status` and
+`wechat_open_chat`, which opens an exact account/username without typing a
+message. The Connections page shows desktop readiness, recovery instructions
+and blocked action reasons, with bounded retry and cancellation controls.
+Navigation uses only exact labels in accessible Contacts/Groups search results,
+never history results. It checks active X11 geometry before clicking and verifies
+the original-process session after opening. Search queries are cleared only if
+they still exactly match the driver's own input. Manual input is preserved.
 The independent AT-SPI driver does not patch WeChat or copy Qibox code/offsets.
 Qt's search editor is disambiguated inside the titled chat pane. For the painted
 Send button absent from AT-SPI, local Tesseract OCR must recognize one complete
@@ -90,8 +104,10 @@ reads the original WeChat process without writing or injecting code. Qt metadata
 in the installed ELF identifies the session-loaded handler and derives the
 current session-name field; a live QObject backlink, runtime code checks and
 stable reads reject stale or racing heap data. Exactly one live typed chat page
-must resolve the requested username, and its visible title must uniquely match
-the database contact. Account and session are checked again before submission.
+must resolve the requested username, and its visible chat title must match
+the database contact with a unique composer. A globally unique nickname is not
+required because the exact process session supplies identity. Account and session
+are checked again before submission.
 Version eligibility compares the first two numeric components, without a major
 version ceiling; it never replaces structural validation. No external offset
 table is copied. Unsupported or ambiguous layouts fail closed. Existing drafts and manual input

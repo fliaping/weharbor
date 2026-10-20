@@ -218,8 +218,9 @@ request = urllib.request.Request('http://127.0.0.1:8766/mcp',
     headers={'Authorization':'Bearer ' + token, 'Content-Type':'application/json'})
 with urllib.request.urlopen(request, timeout=5) as response:
     tools = json.load(response)['result']['tools']
-assert len(tools) == 12
-print('Authenticated MCP exposes twelve tools')
+assert len(tools) == 14
+assert {'wechat_open_chat', 'wechat_desktop_status'} <= {t['name'] for t in tools}
+print('Authenticated MCP exposes fourteen tools, including navigation and readiness')
 identity = subprocess.run(['s6-setuidgid', 'abc', 'sudo', '-n',
     '/usr/local/bin/weharbor-capture-key'], input=json.dumps(
         {'mode': 'session', 'account': 'synthetic'}),

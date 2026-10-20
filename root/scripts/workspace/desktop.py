@@ -5,8 +5,44 @@ import subprocess
 import time
 from pathlib import Path
 
+RECOVERY = {
+    'ACTION_EXPIRED': ('操作已过期', '核对当前会话后重新准备需要执行的操作。', False),
+    'WECHAT_ACCESSIBILITY_UNAVAILABLE': ('微信辅助功能不可用', '启动微信并确认已启用辅助功能。', False),
+    'ACTIVE_ACCOUNT_UNVERIFIED': ('微信账号未就绪', '登录与请求匹配的本地微信账号。', True),
+    'CHAT_IDENTITY_UNAVAILABLE': ('无法核验当前会话', '确认微信已解锁；不支持的版本布局需更新驱动。', False),
+    'CHAT_IDENTITY_UNVERIFIED': ('当前聊天与目标不匹配', '使用打开聊天操作重新定位并核验目标。', True),
+    'WECHAT_NOT_FOREGROUND': ('微信不在前台', '切回微信桌面后重试。', True),
+    'WECHAT_WINDOW_UNVERIFIED': ('微信窗口不唯一或不可见', '恢复微信主窗口并关闭额外窗口后重试。', True),
+    'WECHAT_LOCKED': ('微信已锁定', '手动解锁微信后重试。', True),
+    'WECHAT_LOGIN_REQUIRED': ('微信尚未登录', '在微信中完成登录或手机确认后重试。', True),
+    'WECHAT_DIALOG_OPEN': ('微信存在弹窗或菜单', '手动处理弹窗或关闭菜单后重试。', True),
+    'EXISTING_DRAFT': ('聊天中有未发送草稿', '先发送或自行保存、清空草稿；系统不会覆盖它。', True),
+    'MANUAL_INPUT_ACTIVE': ('检测到键鼠操作', '松开按键并暂停手动操作后重试。', True),
+    'SEARCH_INPUT_BUSY': ('微信搜索框正在使用', '先结束或清空当前搜索后重试。', True),
+    'SEARCH_INPUT_CHANGED': ('搜索内容被改动', '结束手动操作并清空搜索后重试。', True),
+    'CHAT_SEARCH_UNAVAILABLE': ('找不到唯一的联系人搜索框', '切回微信聊天主界面后重试。', True),
+    'CHAT_TARGET_NOT_FOUND': ('没有找到可核验的目标聊天', '确认联系人存在，或手动打开准确的目标聊天。', True),
+    'CHAT_SEARCH_AMBIGUOUS': ('搜索结果过多，无法准确定位', '手动打开目标聊天后重试。', True),
+    'CHAT_NAVIGATION_TIMEOUT': ('定位聊天超时', '确认微信响应正常后重试。', True),
+    'LOCAL_READER_UNAVAILABLE': ('本地消息服务暂不可用', '等待本地消息服务恢复后重试。', True),
+    'SEND_VISUAL_UNVERIFIED': ('无法核验发送按钮', '检查窗口、主题和微信版本；不要重复提交结果不确定的消息。', False),
+}
+
+
 class DesktopError(RuntimeError):
-    pass
+    def __init__(self, message, *, retry_safe=True):
+        super().__init__(message)
+        self.retry_safe = retry_safe
+
+    @property
+    def code(self):
+        return str(self).split(':', 1)[0]
+
+    def public(self):
+        message, recovery, retryable = RECOVERY.get(self.code,
+            ('微信操作检查未通过', '检查微信窗口与操作记录后再决定下一步。', False))
+        return {'code': self.code, 'message': message, 'recovery': recovery,
+                'retryable': retryable and self.retry_safe}
 
 def session_environment():
     for proc in Path('/proc').iterdir():
@@ -162,8 +198,29 @@ class Desktop:
                 if pointer.mask & (X.Button1Mask | X.Button2Mask | X.Button3Mask | X.ShiftMask | X.ControlMask | X.Mod1Mask):
                     raise DesktopError('MANUAL_INPUT_ACTIVE')
                 break
+            if any(d.query_keymap()):
+                raise DesktopError('MANUAL_INPUT_ACTIVE')
         finally:
             d.close()
+
+    def status(self, binding=None):
+        try:
+            from desktop_navigation import guard, search_control
+            nodes = self.nodes()
+            main = guard(self, nodes)
+            self._foreground(main)
+            search_control(self, nodes)
+            if binding:
+                self._account(binding['account'])
+                self.ready(binding)
+            return {'state': 'ready', 'code': 'READY', 'message': '微信桌面就绪',
+                    'recovery': '', 'retryable': False, 'chat_verified': binding is not None}
+        except DesktopError as exc:
+            return {'state': 'blocked', 'chat_verified': False, **exc.public()}
+
+    def open_chat(self, binding):
+        from desktop_navigation import open_chat
+        return open_chat(self, binding)
 
     def ready(self, binding):
         editor, _ = self._controls(binding)
@@ -172,16 +229,32 @@ class Desktop:
         return True
 
     def send(self, binding, text, before_click):
+        self.open_chat(binding)
         editor, _ = self._controls(binding)
         if self.a.Text.get_text(editor, 0, -1):
             raise DesktopError('EXISTING_DRAFT')
         if not self.a.Component.grab_focus(editor):
             raise DesktopError('EDITOR_FOCUS_FAILED')
+        self._not_expired(binding)
+        try:
+            return self._submit(editor, binding, text, before_click)
+        except DesktopError as exc:
+            # Once any editor write was attempted, preserve the draft and
+            # require inspection. A transient UI fault cannot authorize retry.
+            exc.retry_safe = False
+            raise
+
+    def _not_expired(self, binding):
+        if binding.get('expires_at') is not None and time.time() > binding['expires_at']:
+            raise DesktopError('ACTION_EXPIRED', retry_safe=False)
+
+    def _submit(self, editor, binding, text, before_click):
         if not self.a.EditableText.set_text_contents(editor, text):
             raise DesktopError('EDITOR_WRITE_FAILED')
         editor2, send = self._controls(binding, require_send=True)
         if editor2 != editor or self.a.Text.get_text(editor, 0, -1) != text:
             raise DesktopError('CHAT_OR_DRAFT_CHANGED')
+        self._not_expired(binding)
         # Persist submitted before any action can reach WeChat. An interrupted
         # click is uncertain and must never be retried automatically.
         before_click()

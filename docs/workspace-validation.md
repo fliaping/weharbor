@@ -5,6 +5,22 @@ contains counts and status only; keys, chat contents and account identities are
 not committed. The preceding baseline image was
 `sha256:5e7b6ef5b43e12e135251d23f51076e6b81a540c507a43e2c59584f67ceb5d7c`.
 
+## October 20 navigation and recovery validation
+
+- Passed 117 integration/source tests, covering exact-result navigation, duplicate
+  titles, exclusion of history/message results, draft and manual-search
+  preservation, structured recovery, pre-input retry, context cancellation,
+  expiration during navigation and no retry after attempted composer writes.
+- On the unlocked NAS, the new driver opened the authorized target from the
+  Contacts page and verified its exact original-process session. It cleared only
+  its own search query. An owned synthetic draft blocked navigation and readiness
+  checks and remained unchanged; after removing only that draft, readiness
+  recovered. No message was sent during these navigation/recovery checks.
+- MCP now exposes fourteen tools, including read-only desktop readiness and
+  exact-target navigation. Scheduled transient pre-input failures may recover
+  for at most five minutes after due time; changed context cancels the action.
+  Expiry is checked again before editor writes and submission.
+
 ## October 20 unlocked-chat validation
 
 - After the owner unlocked WeChat and selected the authorized one-to-one chat,
@@ -151,9 +167,9 @@ The previous image remains tagged locally as `weharbor:before-realtime-20261020`
 
 ## Pending deployment checks
 
-The driver has now passed the authorized real-chat tests above. It requires
-that target chat to be selected; it does not automatically navigate arbitrary
-chats or attachments. Independent incoming-message latency, recipient delivery
+The driver has now passed the authorized real-chat tests above and exact-target
+navigation through the accessible Contacts search results. It does not send
+attachments, quoted replies, mentions or forwards. Independent incoming-message latency, recipient delivery
 and read receipts remain unverified.
 
 Model dialogue awaits Harness model credentials. Tailscale login and named

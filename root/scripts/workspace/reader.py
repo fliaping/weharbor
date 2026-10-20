@@ -134,6 +134,9 @@ class Reader:
     async def sync(self):
         # Only local source refreshes are allowed; credentials never cross to another transport.
         async with httpx.AsyncClient(timeout=600, trust_env=False) as client:
-            r = await client.post(LOCAL + '/api/linux/sync', headers={'X-WeHarbor-Action': 'sync'})
-            r.raise_for_status()
-            return r.json()
+            try:
+                r = await client.post(LOCAL + '/api/linux/sync', headers={'X-WeHarbor-Action': 'sync'})
+                r.raise_for_status()
+                return r.json()
+            except (httpx.HTTPError, ValueError) as exc:
+                raise RuntimeError('Local desktop message synchronization is unavailable') from exc
