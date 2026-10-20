@@ -203,6 +203,7 @@ class ActionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.actions.get(item['id'])['status'], 'expired')
 
     async def test_read_only_status_and_open_chat_share_exact_local_binding(self):
+        self.reader.selected = None
         self.assertTrue((await self.actions.desktop_status('account', 'wxid_target'))['chat_verified'])
         with patch.object(FakeDesktop, 'open_chat', return_value={'verified': True, 'navigated': True}) as opened:
             self.assertTrue((await self.actions.open_chat('account', 'wxid_target'))['navigated'])

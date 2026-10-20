@@ -73,7 +73,9 @@ class Actions:
 
     async def binding(self, account, username, context):
         contacts = rows(await self.reader.get_local('chat/contacts', {'account': account, 'source': 'decrypted'}), 'contacts', 'items')
-        self.require_local()
+        # This response is pinned to the local reader. Navigation/readiness must
+        # work immediately after service startup, before transport discovery.
+        # Preparation separately rejects authorization from a remote reader.
         target = [c for c in contacts if (c.get('username') or c.get('userName')) == username]
         if len(target) != 1:
             raise ValueError('The exact username must resolve to one contact')
