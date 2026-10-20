@@ -11,13 +11,16 @@ The pinned fork is `fliaping/WeChatDataAnalysis`; the source revision and archiv
 checksum are in `versions.lock.json`. The Linux adapter first uses existing
 account-specific WeFlow keys, verifies decrypted SQLite/WAL snapshots, and
 verifies image AES/XOR keys against actual V2 images. Original encrypted files
-are never overwritten. Refresh runs every 30 seconds and can be triggered in
-the UI or through MCP. Decrypted copies and verified keys remain under
+are never overwritten. A serialized Linux DB/WAL watcher refreshes changed
+files, with a two-second recovery scan; refresh can also be triggered in the
+UI or through MCP. Decrypted copies and verified keys remain under
 `/config/.local/share/weharbor/analysis`, with private permissions.
 Linux chat auto-update uses snapshot revision events over SSE: after a validated
 sync, the page refreshes sessions and the selected conversation. Reconnecting
-also refreshes the page data. This is periodic synchronization (roughly 30 seconds
-plus decryption time), not a native WCDB connection; imported archives remain
+also refreshes the page data. Linux uses inotify with a 150 ms debounce and
+SSE revision checks every 200 ms, targeting 1–3 seconds after source writes.
+This is validated snapshot synchronization, not a native WCDB connection;
+decryption, busy files and host load can delay it. Imported archives remain
 static. Unchanged sync attempts do not trigger repeated chat refreshes.
 
 If no usable key exists, the Linux source card offers an explicit wcdb-key-tool
@@ -70,16 +73,49 @@ Both clients read their own local token files; tokens stay outside the patch.
 Configure your model credentials in Harness's own setup UI;
 WeHarbor does not copy Alpha/WeFlow credentials into Harness. Its state is
 `/config/.local/share/weharbor/harness`.
+The loopback proxy exchanges DSH's process-scoped launch token on the server
+and scopes its signed HttpOnly cookie to `/assistant/`. The token is redacted
+from logs. Original browser origins are checked before forwarding HTTP and
+WebSocket traffic; the external browser authentication remains required.
 
 Read, search, summarize and suggest replies use message MCP tools. Sending is a
 separate prepare/commit action with an exact username, idempotency key, context
 revision, desktop checks and persistent receipt. Scheduling uses the same
-checks and requires the selected target chat to remain ready at the due time.
+checks and automatically opens and verifies the exact target at the due time.
 Preparation alone never schedules a send: commit activates a future action.
+Only transient failures before a composer write may wait for recovery; scheduled
+actions retry every five seconds for at most five minutes after their due time.
+An immediate action retains its original 120-second lifetime. Context changes
+cancel execution, and any failure after an attempted composer write prevents
+automatic retry. Submitted or uncertain actions are never retried.
+
+The 35 WeHarbor MCP tools include read-only `wechat_desktop_status` and
+`wechat_open_chat`, which opens an exact account/username without typing a
+message. The Connections page shows desktop readiness, recovery instructions
+and blocked action reasons, with bounded retry and cancellation controls.
+Navigation uses only exact labels in accessible Contacts/Groups search results,
+never history results. It checks active X11 geometry before clicking and verifies
+the original-process session after opening. Search queries are cleared only if
+they still exactly match the driver's own input. Manual input is preserved.
 The independent AT-SPI driver does not patch WeChat or copy Qibox code/offsets.
-It verifies the open account from process file descriptors and binds the visible
-chat using unique DB contact names plus an ID or recent message fingerprints.
-Unsupported or ambiguous layouts fail closed. Existing drafts and manual input
+Qt's search editor is disambiguated inside the titled chat pane. For the painted
+Send button absent from AT-SPI, local Tesseract OCR must recognize one complete
+Send caption with at least 80% confidence per word inside the composer's right
+toolbar region and enabled green button. X11 geometry corrects Qt high-DPI
+coordinates, and a moved or changed window prevents clicking. No screenshot or
+chat text is sent to an OCR service.
+It verifies the open account from process file descriptors. A fixed root helper
+reads the original WeChat process without writing or injecting code. Qt metadata
+in the installed ELF identifies the session-loaded handler and derives the
+current session-name field; a live QObject backlink, runtime code checks and
+stable reads reject stale or racing heap data. Exactly one live typed chat page
+must resolve the requested username, and its visible chat title must match
+the database contact with a unique composer. A globally unique nickname is not
+required because the exact process session supplies identity. Account and session
+are checked again before submission.
+Version eligibility compares the first two numeric components, without a major
+version ceiling; it never replaces structural validation. No external offset
+table is copied. Unsupported or ambiguous layouts fail closed. Existing drafts and manual input
 are preserved; an interrupted submission is never retried automatically.
 
 A `sent` receipt means the new self-message appeared in the database, not

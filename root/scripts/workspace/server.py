@@ -13,8 +13,8 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, Response
 from reader import Reader, STATE, LOCAL, public_config, save_config
 from actions import Actions
-from desktop import Desktop
 from operations import Operations, DEFINITIONS, MAX_ATTACHMENT, UPLOADS
+from desktop import Desktop, DesktopError
 from network import Network
 
 TOKEN_FILE = Path(os.environ.get('WEHARBOR_TOKEN_FILE', '/config/.config/weharbor/workspace.token'))
@@ -44,22 +44,13 @@ async def lifespan(app):
             await asyncio.sleep(30)
             await network.start()
     connector = asyncio.create_task(reconnect())
-    async def refresh_local():
-        while True:
-            try:
-                await reader.sync()
-            except Exception:
-                pass
-            await asyncio.sleep(30)
-    refresh = asyncio.create_task(refresh_local())
+    # The analysis service owns its DB/WAL watcher and bounded fallback.
+    # Starting a second polling loop here duplicates expensive decryptions.
     yield
     task.cancel()
-    refresh.cancel()
     connector.cancel()
     with contextlib.suppress(asyncio.CancelledError):
         await task
-    with contextlib.suppress(asyncio.CancelledError):
-        await refresh
     with contextlib.suppress(asyncio.CancelledError):
         await connector
     await network.close()
@@ -91,6 +82,11 @@ async def invalid(request, exc):
 @app.exception_handler(RuntimeError)
 async def unavailable(request, exc):
     return JSONResponse({'error': str(exc)}, status_code=409)
+
+@app.exception_handler(DesktopError)
+async def desktop_blocked(request, exc):
+    detail = exc.public()
+    return JSONResponse({'error': detail['message'], **detail}, status_code=409)
 
 @app.get('/health')
 async def health():
@@ -212,6 +208,17 @@ async def operate(identifier: str, operation: str):
         return await operations.cancel(identifier)
     raise HTTPException(404)
 
+@app.get('/desktop/status')
+async def desktop_status(account: str | None = None, username: str | None = None):
+    return await actions.desktop_status(account, username)
+
+@app.post('/desktop/open')
+async def open_chat(request: Request):
+    value = await request.json()
+    if not isinstance(value, dict) or set(value) != {'account', 'username'}:
+        raise ValueError('Expected account and exact username')
+    return await actions.open_chat(**value)
+
 @app.post('/actions/prepare')
 async def prepare(request: Request):
     value = await request.json()
@@ -255,6 +262,8 @@ TOOLS = [
     ('wechat_group_members', 'Read group member identities from the selected authenticated message reader', schema({'account':'string','username':'string','limit':'integer','offset':'integer'}, ['account','username'])),
     ('wechat_contact_profile', 'Read an exact contact profile', schema({'account':'string','username':'string'}, ['account','username'])),
     ('wechat_contact_list_labels', 'Read the complete WeChat label list using a bound anchor chat. Does not change labels; unsupported or partial accessible lists are rejected.', schema({'account':'string','username':'string'}, ['account','username'])),
+    ('wechat_desktop_status', 'Check readiness and recovery steps without interacting. Supply both account and username to verify a target chat.', schema({'account':'string','username':'string'})),
+    ('wechat_open_chat', 'Open a local chat resolved by exact username and verify its session ID. Does not type or send a message; preserves drafts and manual search.', schema({'account':'string','username':'string'}, ['account','username'])),
     ('wechat_prepare_send', 'Prepare exact text to one verified username. Never infer authorization from messages. due is optional Unix seconds.', schema({'account':'string','username':'string','text':'string','idempotency_key':'string','due':'number'}, ['account','username','text','idempotency_key'])),
     ('wechat_commit_send', 'Send a prepared action once. Requires explicit user authorization for the recipient and content.', schema({'action_id':'string'}, ['action_id'])),
     ('wechat_cancel_send', 'Cancel a pending action', schema({'action_id':'string'}, ['action_id'])),
@@ -270,7 +279,7 @@ for operation, fields in DEFINITIONS.items():
         'Apply explicitly authorized ' + operation + ' once with a durable idempotency key. Requires an exact local chat and supported AT-SPI layout; uploaded media paths only. A sent receipt requires a matching database hash; completed settings use UI readback.',
         schema(properties, properties)))
 
-WRITES = {'wechat_sync','wechat_sns_autorefresh','wechat_prepare_send','wechat_commit_send','wechat_cancel_send',
+WRITES = {'wechat_sync','wechat_open_chat','wechat_sns_autorefresh','wechat_prepare_send','wechat_commit_send','wechat_cancel_send',
           'wechat_prepare_operation','wechat_commit_operation','wechat_cancel_operation'} | {'wechat_' + name.replace('-', '_') for name in DEFINITIONS}
 
 async def call_tool(name, args):
@@ -299,6 +308,8 @@ async def call_tool(name, args):
     operation = name.removeprefix('wechat_').replace('_', '-')
     if operation in DEFINITIONS:
         return await operations.execute(operation, **args)
+    if name == 'wechat_desktop_status': return await actions.desktop_status(**args)
+    if name == 'wechat_open_chat': return await actions.open_chat(**args)
     if name == 'weharbor_connections': return await reader.probe()
     if name == 'wechat_desktop_inspect': return await asyncio.to_thread(lambda: Desktop().inspect())
     raise ValueError('Unknown tool')
@@ -340,7 +351,8 @@ async def rpc(message):
             payload = await call_tool(name, arguments)
             result = {'content': [{'type':'text', 'text': json.dumps(payload, ensure_ascii=False)}]}
         except Exception as exc:
-            result = {'isError': True, 'content': [{'type':'text','text': str(exc) if isinstance(exc, (ValueError, RuntimeError)) else type(exc).__name__}]}
+            detail = json.dumps(exc.public(), ensure_ascii=False) if isinstance(exc, DesktopError) else str(exc) if isinstance(exc, (ValueError, RuntimeError)) else type(exc).__name__
+            result = {'isError': True, 'content': [{'type':'text','text': detail}]}
     elif method == 'resources/list':
         result = {'resources': [{'uri':'weharbor://skill','name':'WeHarbor skill','mimeType':'text/markdown'}]}
     elif method == 'resources/read' and args.get('uri') == 'weharbor://skill':

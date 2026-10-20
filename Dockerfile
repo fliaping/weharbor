@@ -27,7 +27,7 @@ RUN npm ci --no-audit --no-fund \
     && rm -rf /opt/weharbor/analysis/frontend /opt/weharbor/analysis/data /opt/weharbor/analysis/output /opt/weharbor/analysis/.git
 COPY runtime/harness/package*.json /opt/weharbor/harness/
 WORKDIR /opt/weharbor/harness
-RUN npm ci --legacy-peer-deps --omit=dev --no-audit --no-fund \
+RUN npm ci --omit=dev --no-audit --no-fund \
     && node node_modules/@deepseek-ai/dsh-subprocess-local/scripts/ensure-spawn-helper.mjs \
     && node -e "require('node-pty'); require('koffi')"
 
@@ -58,6 +58,7 @@ RUN test "${TARGETARCH:-amd64}" = amd64 \
         dbus-x11 gnome-keyring libsecret-1-0 inotify-tools stalonetray \
         python3-dbus python3-xlib python3-gi gir1.2-atspi-2.0 at-spi2-core \
         python3-venv python3-dev build-essential gdb sudo \
+        tesseract-ocr tesseract-ocr-chi-sim \
         libatomic1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
         libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 \
         libxkbcommon-x11-0 libnss3 libgbm1 libasound2t64 \

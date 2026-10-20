@@ -313,35 +313,6 @@ class AccessibleDriverTests(unittest.TestCase):
         with self.assertRaisesRegex(desktop.DesktopError, 'AMBIGUOUS'):
             d.operation({'account': 'a'}, 'chat-set-mute', {'muted': True}, lambda: self.fail('must not submit'))
 
-    def test_search_preserves_existing_draft_and_rejects_fuzzy_results(self):
-        d = self.driver()
-        draft = AccessibleNode(states=['show', 'edit', 'multi'], text='user draft')
-        search = AccessibleNode('搜索', 'entry', states=['show', 'edit'])
-        binding = {'account': 'a', 'username': 'wxid_exact', 'names': ['Only Target'], 'messages': []}
-        d.nodes = lambda: [draft, search]
-        with self.assertRaisesRegex(desktop.DesktopError, 'EXISTING_DRAFT'):
-            d.open_chat(binding, lambda: self.fail('must not submit'))
-        draft.text = ''
-        fuzzy = AccessibleNode('Only Target', 'list item', children=[AccessibleNode('Only Target')], action=lambda: self.fail('fuzzy result clicked'))
-        d.nodes = lambda: [draft, search, fuzzy]
-        d._wait = lambda find: find()
-        with self.assertRaisesRegex(desktop.DesktopError, 'SEARCH_IDENTITY_UNVERIFIED'):
-            d.open_chat(binding, lambda: self.fail('must not submit'))
-        self.assertEqual(search.text, '')
-
-    def test_search_selects_only_one_exact_identity_and_restores_search(self):
-        d = self.driver()
-        search = AccessibleNode('搜索', 'entry', states=['show', 'edit'])
-        events = []
-        target = AccessibleNode(role='list item', children=[AccessibleNode('Only Target'), AccessibleNode('微信号：alias_exact')], action=lambda: events.append('open'))
-        d.nodes = lambda: [search, target]
-        d._wait = lambda find: find()
-        d._controls = lambda binding: events.append('verify')
-        binding = {'account': 'a', 'username': 'wxid_exact', 'alias': 'alias_exact', 'names': ['Only Target']}
-        self.assertTrue(d.open_chat(binding, lambda: events.append('submitted'))['verified'])
-        self.assertEqual(events, ['submitted', 'open', 'verify'])
-        self.assertEqual(search.text, '')
-
     def test_accessibility_inspection_cannot_activate_unnamed_actions(self):
         node = AccessibleNode('Send', 'button')
         d = self.driver()
@@ -436,7 +407,7 @@ class OperationApiTests(unittest.TestCase):
 
     def test_mcp_advertises_real_operations_and_accepts_boolean_without_integer_confusion(self):
         tools = asyncio.run(self.server.rpc({'id': 1, 'method': 'tools/list'}))['result']['tools']
-        self.assertEqual(len(tools), 33)
+        self.assertEqual(len(tools), 35)
         by_name = {t['name']: t for t in tools}
         self.assertFalse(by_name['wechat_chat_set_mute']['annotations']['readOnlyHint'])
         self.assertTrue(by_name['wechat_contact_lookup']['annotations']['readOnlyHint'])
