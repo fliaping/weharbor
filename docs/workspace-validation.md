@@ -24,6 +24,22 @@ not committed. The preceding baseline image was
   passes through unchanged; a regression test exercises channel validation
   and one-time base-URI resolution. A fresh browser profile connects and
   displays model configuration without making a model request.
+- Final image `sha256:b8fa1b571a93db07da9513678854382552722709c8bc55d7232fd1dfd36a10f8`
+  was built from application revision `d248e9875f8421e34369cb90380f7b79381159de`.
+  Fresh-profile smoke tests passed locally and on the NAS, including restart,
+  browser authentication, origin rejection, MCP discovery and unchanged
+  original WeChat/Alpha package files. The existing-profile container was
+  replaced with this image and reports healthy.
+- Production checks show filesystem-event monitoring with a two-second
+  fallback, SSE ready, 26 synchronized databases and zero failed accounts.
+  The actual NAS browser connects without a reconnect banner or console
+  errors, and opens the API-key form. No key or model was configured. The
+  Harness MCP plugin is active and exposes twelve tools. Protected integration
+  state fingerprints match the backup.
+- An isolated 8 KiB encrypted DB/WAL fixture on the NAS completed three
+  authenticated decrypt/validated snapshot/SSE updates in 403 ms each. This
+  verifies the synthetic event path; it does not establish latency for real
+  messages or larger databases.
 - Current-chat proof derives the session-name field from the installed
   original WeChat ELF metadata and handler code. It reads process memory
   without attaching a debugger or writing memory. Only an exact first-two-
@@ -118,6 +134,10 @@ selects the locally built image without pulling it. The original profile volume
 is preserved. Before deploying, the original Compose configuration and private
 container metadata were backed up, and the previous image was tagged locally.
 Keep that backup and image until the pending account/model/network checks pass.
+The event-sync rollout backup is `event-sync-20261020-064151` under the private
+deployment backup directory. The preceding image remains tagged
+`weharbor:before-fast-sync-20261020`; the intermediate Harness integration
+image is also retained as `weharbor:before-harness-fix-20261020`.
 
 No combined image was published. Upstream analysis licensing and the vendor
 redistribution conditions in `THIRD_PARTY_NOTICES.md` still require clarification
