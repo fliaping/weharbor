@@ -14,6 +14,11 @@ import urllib.error
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
+TRANSPORT_JS = '''export const channel = "/api";
+export const socketPath = "/api/remote.mux";
+export const resolveSocket = base => new URL(socketPath.slice(1), base).href;
+export const callPath = endpoint => `${channel}/${endpoint}`.slice(1);
+'''
 FAKE_DSH = r'''
 import http from 'node:http';
 const args = process.argv.slice(2);
@@ -28,6 +33,10 @@ const server = http.createServer((req, res) => {
     res.end(); return;
   }
   if (!req.headers.cookie?.includes('dsh-auth-test=signed')) { res.writeHead(401); res.end(); return; }
+  if (url.pathname === '/assets/transport.js') {
+    res.setHeader('content-type', 'text/javascript');
+    res.end(process.env.TEST_TRANSPORT_JS); return;
+  }
   if (url.pathname === '/api/message') {
     res.setHeader('content-type', 'application/json');
     res.end(JSON.stringify({text: '/api/private user content'})); return;
@@ -68,6 +77,7 @@ class HarnessProxyTests(unittest.TestCase):
             ['node', str(ROOT / 'root/scripts/workspace/harness-proxy.mjs'),
              '--port', str(cls.port), '--patch', str(directory / 'patch.yml')],
             env=dict(os.environ, DSH_BIN=str(fake), DSH_WORKSPACE=str(directory),
+                     TEST_TRANSPORT_JS=TRANSPORT_JS,
                      DSH_WEB_PROXY_PREFIX='/assistant', DSH_WEB_UPSTREAM_PORT=str(upstream)),
             stdout=cls.log, stderr=cls.log, start_new_session=True)
         cls.jar = http.cookiejar.CookieJar()
@@ -105,6 +115,21 @@ class HarnessProxyTests(unittest.TestCase):
         self.assertEqual(failure.exception.code, 401)
         with self.browser.open(self.base + 'api/message') as response:
             self.assertEqual(response.read(), b'{"text":"/api/private user content"}')
+
+    def test_native_transport_keeps_logical_channel_and_resolves_prefix_once(self):
+        with self.browser.open(self.base + 'assets/transport.js') as response:
+            source = response.read().decode()
+        self.assertEqual(source, TRANSPORT_JS)
+        # Exercise the DSH browser transport's channel and base-URI contract.
+        script = source.replace('export ', '') + f'''
+import assert from 'node:assert/strict';
+assert.match(channel, /^\\/[A-Za-z0-9._~-]+$/);
+assert.equal(resolveSocket({self.base!r}), {self.base + 'api/remote.mux'!r});
+assert.equal(new URL(callPath('settings/describe'), {self.base!r}).href,
+             {self.base + 'api/settings/describe'!r});
+'''
+        subprocess.run(['node', '--input-type=module', '-e', script], check=True,
+                       capture_output=True, text=True, timeout=5)
 
     def test_cross_origin_and_cross_site_cannot_bootstrap(self):
         for headers in [{'Origin': 'https://evil.test'}, {'Sec-Fetch-Site': 'cross-site'}]:

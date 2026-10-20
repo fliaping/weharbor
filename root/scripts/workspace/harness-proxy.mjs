@@ -119,7 +119,7 @@ function upstreamPath(requestUrl = "/") {
 }
 
 function rewriteBrowserPaths(value) {
-  const roots = "(?:(?:assets|plugins|api)(?:/|(?=[^A-Za-z0-9_.-]))|manifest\\.webmanifest|favicon\\.svg)";
+  const roots = "(?:(?:assets|plugins)(?:/|(?=[^A-Za-z0-9_.-]))|manifest\\.webmanifest|favicon\\.svg)";
   const quotedRoot = new RegExp(
     "([\"'\\u0060])/(?=" + roots + ")",
     "gu",
@@ -143,8 +143,11 @@ function browserCompatibility(value, headers) {
 
 function isTextResponse(headers) {
   const type = String(headers["content-type"] || "").toLowerCase();
-  // API JSON and SSE carry user messages; rewriting those changes content.
-  return /(?:text\/html|text\/css|javascript|manifest)/u.test(type);
+  // DSH resolves transports against document.baseURI itself. JavaScript also
+  // contains logical RPC channels such as /api; prefixing those breaks both
+  // channel validation and WebSocket URL resolution. Pass bundles through.
+  // API JSON and SSE carry user messages and must remain unchanged too.
+  return /(?:text\/html|text\/css|manifest)/u.test(type);
 }
 
 const child = spawn(

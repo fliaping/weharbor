@@ -11,7 +11,7 @@ not committed. The preceding baseline image was
   DB/WAL notifications debounce for 150 ms, with a two-second fallback scan.
   Revision SSE checks run every 200 ms. The target is 1–3 seconds after a
   stable database write; decryption duration still limits actual latency.
-- Passed 70 targeted analysis tests and 91 integration/source tests. The
+- Passed 70 targeted analysis tests and 92 integration/source tests. The
   filesystem test exercises writes and rename replacement, while existing
   tests cover authenticated decryption, WAL recovery and publication failures.
 - DSH `0.2.1-rc.2` was the official npm latest on October 20, 2026. A fresh
@@ -19,6 +19,11 @@ not committed. The preceding baseline image was
   twelve tools, including send preparation. No tool call or model request was
   made. The proxy now supports signed browser sessions, scoped cookies and
   the current settings RPC while preserving foreign-origin rejection.
+- Browser verification against the official DSH bundle found that logical
+  RPC channels must not be rewritten by the subpath proxy. JavaScript now
+  passes through unchanged; a regression test exercises channel validation
+  and one-time base-URI resolution. A fresh browser profile connects and
+  displays model configuration without making a model request.
 - Current-chat proof derives the session-name field from the installed
   original WeChat ELF metadata and handler code. It reads process memory
   without attaching a debugger or writing memory. Only an exact first-two-
