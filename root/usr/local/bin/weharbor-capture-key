@@ -3,6 +3,7 @@
 import json
 import os
 import pwd
+import subprocess
 import sys
 from pathlib import Path
 
@@ -26,5 +27,13 @@ elif request.get('mode') == 'image':
     from wechat_decrypt_tool.image_key_memory_scan import scan_image_key_from_memory
     result = scan_image_key_from_memory(account, timeout=60)
     print(json.dumps(result.as_dict() if result else None))
+elif request.get('mode') == 'session':
+    sys.path.insert(0, '/scripts/workspace')
+    from session_identity import capture, IdentityError
+    try:
+        print(json.dumps(capture(request.get('account'))))
+    except (IdentityError, OSError, ValueError, KeyError, subprocess.SubprocessError):
+        # Never expose process memory, account values or paths on failure.
+        print(json.dumps({'verified': False, 'error': 'SESSION_IDENTITY_UNAVAILABLE'}))
 else:
     raise SystemExit('Unsupported capture mode')

@@ -9,10 +9,15 @@ const rawArgs = process.argv.slice(2);
 let listenHost = "127.0.0.1";
 let listenPort = 3080;
 const dshArgs = [];
+const launcherArgs = [];
 
 for (let index = 0; index < rawArgs.length; index += 1) {
   const arg = rawArgs[index];
-  if (arg === "--host" && rawArgs[index + 1]) {
+  if (arg === "--patch" && rawArgs[index + 1]) {
+    launcherArgs.push(arg, rawArgs[++index]);
+  } else if (arg.startsWith("--patch=")) {
+    launcherArgs.push(arg);
+  } else if (arg === "--host" && rawArgs[index + 1]) {
     listenHost = rawArgs[index + 1];
     index += 1;
   } else if (arg.startsWith("--host=")) {
@@ -48,6 +53,38 @@ const publicPrefix = (
   process.env.DSH_WEB_PROXY_PREFIX || `/proxy/${String(listenPort)}`
 ).replace(/\/$/u, "");
 const dshBin = process.env.DSH_BIN || "/config/.npm-global/bin/dsh";
+let launchToken;
+
+// DSH 0.2 prints a process-scoped launch URL. Keep its token inside this
+// loopback proxy; browsers receive only DSH's signed HttpOnly session cookie.
+function relayStartup(stream, output) {
+  let pending = "";
+  function line(value) {
+    const match = value.match(/^dsh web: (http:\/\/[^\s]+)$/u);
+    if (match) {
+      const url = new URL(match[1]);
+      if (url.origin === `http://${upstreamHost}:${upstreamPort}` &&
+          url.pathname === "/" && /^[A-Za-z0-9_-]+$/u.test(url.searchParams.get("token") || "")) {
+        launchToken = url.searchParams.get("token");
+      }
+    }
+    output.write(value.replace(/([?&]token=)[^\s&]+/gu, "$1[redacted]") + "\n");
+  }
+  stream.setEncoding("utf8");
+  stream.on("data", (chunk) => {
+    pending += chunk;
+    let end;
+    while ((end = pending.indexOf("\n")) !== -1) {
+      line(pending.slice(0, end));
+      pending = pending.slice(end + 1);
+    }
+    if (pending.length > 1024 * 1024) {
+      pending = "";
+      output.write("[deepseek-harness-proxy] oversized startup line omitted\n");
+    }
+  });
+  stream.on("end", () => { if (pending) line(pending); });
+}
 
 function trustedRequest(request) {
   if (request.headers["sec-fetch-site"] === "cross-site") return false;
@@ -82,7 +119,7 @@ function upstreamPath(requestUrl = "/") {
 }
 
 function rewriteBrowserPaths(value) {
-  const roots = "(?:(?:assets|plugins|api)(?:/|(?=[^A-Za-z0-9_.-]))|manifest\\.webmanifest|favicon\\.svg)";
+  const roots = "(?:(?:assets|plugins)(?:/|(?=[^A-Za-z0-9_.-]))|manifest\\.webmanifest|favicon\\.svg)";
   const quotedRoot = new RegExp(
     "([\"'\\u0060])/(?=" + roots + ")",
     "gu",
@@ -106,8 +143,11 @@ function browserCompatibility(value, headers) {
 
 function isTextResponse(headers) {
   const type = String(headers["content-type"] || "").toLowerCase();
-  // API JSON and SSE carry user messages; rewriting those changes content.
-  return /(?:text\/html|text\/css|javascript|manifest)/u.test(type);
+  // DSH resolves transports against document.baseURI itself. JavaScript also
+  // contains logical RPC channels such as /api; prefixing those breaks both
+  // channel validation and WebSocket URL resolution. Pass bundles through.
+  // API JSON and SSE carry user messages and must remain unchanged too.
+  return /(?:text\/html|text\/css|manifest)/u.test(type);
 }
 
 const child = spawn(
@@ -115,7 +155,9 @@ const child = spawn(
   [
     "--expose-internals",
     dshBin,
+    "--profile",
     "web",
+    ...launcherArgs,
     ...dshArgs,
     "--host",
     upstreamHost,
@@ -125,9 +167,11 @@ const child = spawn(
   {
     cwd: process.env.DSH_WORKSPACE || "/config/Workspace",
     env: process.env,
-    stdio: "inherit",
+    stdio: ["inherit", "pipe", "pipe"],
   },
 );
+relayStartup(child.stdout, process.stdout);
+relayStartup(child.stderr, process.stderr);
 
 child.once("error", (error) => {
   console.error(`[deepseek-harness-proxy] failed to start dsh: ${error.message}`);
@@ -152,16 +196,33 @@ const server = http.createServer((request, response) => {
   const headers = upstreamHeaders(request);
   headers["accept-encoding"] = "identity";
 
+  function forward(path, bootstrap = false) {
   const proxyRequest = http.request(
     {
       host: upstreamHost,
       port: upstreamPort,
       method: request.method,
-      path: upstreamPath(request.url),
+      path,
       headers,
     },
     (proxyResponse) => {
+      // Only a trusted initial index navigation can establish a browser
+      // session. APIs and WebSockets must present the resulting cookie.
+      if (!bootstrap && request.method === "GET" && path === "/" &&
+          proxyResponse.statusCode === 401 && launchToken) {
+        proxyResponse.resume();
+        forward(`/?token=${encodeURIComponent(launchToken)}`, true).end();
+        return;
+      }
       const responseHeaders = { ...proxyResponse.headers };
+      if (Array.isArray(responseHeaders["set-cookie"])) {
+        responseHeaders["set-cookie"] = responseHeaders["set-cookie"].map(
+          (value) => value.replace(/; Path=\/;/u, `; Path=${publicPrefix}/;`),
+        );
+      }
+      if (responseHeaders.location === "./") {
+        responseHeaders.location = `${publicPrefix}/`;
+      } else
       if (
         typeof responseHeaders.location === "string" &&
         responseHeaders.location.startsWith("/")
@@ -196,7 +257,9 @@ const server = http.createServer((request, response) => {
     }
     response.end(`DeepSeek Harness is starting: ${error.message}\n`);
   });
-  request.pipe(proxyRequest);
+  return proxyRequest;
+  }
+  request.pipe(forward(upstreamPath(request.url)));
 });
 
 server.on("upgrade", (request, socket, head) => {

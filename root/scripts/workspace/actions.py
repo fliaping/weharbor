@@ -7,7 +7,7 @@ import sqlite3
 import time
 import uuid
 from reader import STATE
-from desktop import Desktop
+from desktop import Desktop, DesktopError
 
 def rows(payload, *keys):
     if isinstance(payload, list):
@@ -73,15 +73,47 @@ class Actions:
 
     async def binding(self, account, username, context):
         contacts = rows(await self.reader.get_local('chat/contacts', {'account': account, 'source': 'decrypted'}), 'contacts', 'items')
-        self.require_local()
+        # This response is pinned to the local reader. Navigation/readiness must
+        # work immediately after service startup, before transport discovery.
+        # Preparation separately rejects authorization from a remote reader.
         target = [c for c in contacts if (c.get('username') or c.get('userName')) == username]
         if len(target) != 1:
             raise ValueError('The exact username must resolve to one contact')
         names = {target[0].get(k) for k in ['displayName', 'remark', 'nickname'] if target[0].get(k)}
-        unique = [name for name in names if sum(any(c.get(k) == name for k in ['displayName', 'remark', 'nickname']) for c in contacts) == 1]
+        names = {name.strip() for name in names if isinstance(name, str) and name.strip()}
+        unique = sorted(name for name in names if sum(any(c.get(k) == name for k in ['displayName', 'remark', 'nickname']) for c in contacts) == 1)
         fingerprints = list(dict.fromkeys(m.get('content') or m.get('text') for m in rows(context, 'messages', 'items')
             if isinstance(m.get('content') or m.get('text'), str) and 8 <= len(m.get('content') or m.get('text')) <= 2000))
-        return {'account': account, 'username': username, 'names': unique, 'alias': target[0].get('alias'), 'messages': fingerprints}
+        alias = target[0].get('alias')
+        if not isinstance(alias, str):
+            alias = None
+        return {'account': account, 'username': username, 'names': sorted(names), 'alias': alias,
+                'search_queries': list(dict.fromkeys(unique + ([alias] if alias else []) + sorted(names))),
+                'messages': fingerprints}
+
+    async def desktop_status(self, account=None, username=None):
+        if bool(account) != bool(username):
+            raise ValueError('Provide both account and exact username, or neither')
+        async with self.lock:
+            binding = None
+            if account:
+                binding = await self.binding(account, username, {})
+            return await asyncio.to_thread(self.desktop_factory().status, binding)
+
+    async def open_chat(self, account, username):
+        if not all(isinstance(x, str) and x.strip() for x in [account, username]):
+            raise ValueError('Account and exact username are required')
+        async with self.lock:
+            binding = await self.binding(account, username, {})
+            return await asyncio.to_thread(self.desktop_factory().open_chat, binding)
+
+    def failure(self, item, exc):
+        submitted = self.get(item['id'])['status'] == 'submitted'
+        detail = exc.public() if isinstance(exc, DesktopError) else {
+            'code': 'ACTION_FAILED', 'message': '操作未完成', 'recovery': '检查微信和服务状态。', 'retryable': False}
+        status = ('uncertain' if submitted else 'expired' if detail['code'] == 'ACTION_EXPIRED'
+                  else 'blocked' if detail['retryable'] else 'failed')
+        self.update(item['id'], status, json.dumps(detail, ensure_ascii=False))
 
     async def prepare(self, account, username, text, idempotency_key, due=None):
         if not all(isinstance(x, str) and x.strip() for x in [account, username, text, idempotency_key]):
@@ -105,7 +137,9 @@ class Actions:
             self.require_local()
             baseline = await self.context(account, username)
             binding = await self.binding(account, username, baseline)
-            await asyncio.to_thread(self.desktop_factory().ready, binding)
+            driver = self.desktop_factory()
+            await asyncio.to_thread(driver.open_chat, binding)
+            await asyncio.to_thread(driver.ready, binding)
             action_id = uuid.uuid4().hex
             with self.db() as db:
                 db.execute('INSERT INTO actions VALUES (?,?,?,?,?,?,?,?,?,?)',
@@ -115,28 +149,34 @@ class Actions:
     async def commit(self, action_id):
         async with self.lock:
             item = self.get(action_id)
-            if item['status'] not in ['prepared', 'scheduled']:
+            if item['status'] not in ['prepared', 'scheduled', 'blocked']:
                 return item
-            if item['status'] == 'prepared' and time.time() - item['created'] > 120:
+            if (((item['status'] == 'prepared' or not item['due']) and time.time() - item['created'] > 120)
+                    or (item['due'] and time.time() > item['due'] + 300)):
                 self.update(action_id, 'expired')
                 raise ValueError('Prepared action expired; prepare again')
             if item['due'] and item['due'] > time.time():
                 if item['status'] == 'prepared':
                     self.update(action_id, 'scheduled', 'Authorized for the requested due time')
                 return self.get(action_id)
-            await self.reader.sync()
-            current = await self.context(item['account'], item['username'])
+            try:
+                await self.reader.sync()
+                current = await self.context(item['account'], item['username'])
+            except (OSError, RuntimeError):
+                exc = DesktopError('LOCAL_READER_UNAVAILABLE')
+                self.failure(item, exc)
+                raise exc from None
             if revision(current) != revision(json.loads(item['baseline'])):
                 self.update(action_id, 'cancelled', 'Conversation changed; prepare a new action')
                 raise ValueError('Conversation changed')
             try:
                 driver = self.desktop_factory()
                 binding = await self.binding(item['account'], item['username'], current)
+                binding['expires_at'] = item['due'] + 300 if item['due'] else item['created'] + 120
                 await asyncio.to_thread(driver.send, binding, item['text'],
                     lambda: self.update(action_id, 'submitted'))
-            except Exception:
-                status = 'uncertain' if self.get(action_id)['status'] == 'submitted' else 'failed'
-                self.update(action_id, status, 'Desktop verification or submission failed')
+            except Exception as exc:
+                self.failure(item, exc)
                 raise
             baseline_ids = {message_id(m) for m in rows(current, 'messages', 'items')}
             for _ in range(6):
@@ -161,7 +201,7 @@ class Actions:
 
     async def cancel(self, action_id):
         async with self.lock:
-            if self.get(action_id)['status'] not in ['prepared', 'scheduled']:
+            if self.get(action_id)['status'] not in ['prepared', 'scheduled', 'blocked']:
                 raise ValueError('Only pending actions can be cancelled')
             self.update(action_id, 'cancelled')
             return self.get(action_id)
@@ -169,7 +209,7 @@ class Actions:
     async def scheduler(self):
         while True:
             with self.db() as db:
-                due = [r[0] for r in db.execute("SELECT id FROM actions WHERE status='scheduled' AND due<=?", (time.time(),))]
+                due = [r[0] for r in db.execute("SELECT id FROM actions WHERE status IN ('scheduled','blocked') AND due IS NOT NULL AND due<=?", (time.time(),))]
             for action_id in due:
                 try:
                     await self.commit(action_id)

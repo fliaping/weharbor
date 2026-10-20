@@ -11,10 +11,10 @@
     "sha256": "b7d0f8d53e9f648bc2c77a6096a04100d008f2d9f0d3988a2a4859b5992aca0a"
   },
   "analysis": {
-    "version": "9ba2b71dc1b8018ab7feb59b028713beeb314f1b",
+    "version": "f9be0a3a1bd0e9abfff5d1563ea29dbb35f28b24",
     "filename": "analysis.tar.gz",
-    "url": "https://codeload.github.com/fliaping/WeChatDataAnalysis/tar.gz/9ba2b71dc1b8018ab7feb59b028713beeb314f1b",
-    "sha256": "9a5465bca8fd7b3ced050e7daff6dce50949ae4dbcceb1b854cb0627010c5f99"
+    "url": "https://codeload.github.com/fliaping/WeChatDataAnalysis/tar.gz/f9be0a3a1bd0e9abfff5d1563ea29dbb35f28b24",
+    "sha256": "54948cb2eb52135e1a91a3361bc7bab8d7dd0ea58ddc53f84590ca81194af884"
   },
   "node": {
     "version": "24.16.0",
@@ -34,7 +34,11 @@
     "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.10.1/cloudflared-linux-amd64",
     "sha256": "3bfc539f45d2620c71debb7a86be0efa737ed5ccbad9eb85c787116900e5c586"
   },
-  "harness": {"version": "0.1.1-rc.2", "package": "@deepseek-ai/dsh", "integrity": "runtime/harness/package-lock.json"},
+  "harness": {
+    "version": "0.2.1-rc.2",
+    "package": "@deepseek-ai/dsh",
+    "integrity": "runtime/harness/package-lock.json"
+  },
   "selkies": {
     "version": "2.0.0",
     "note": "bundled by the LinuxServer.io baseimage-selkies debiantrixie image"

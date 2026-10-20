@@ -1,12 +1,20 @@
 # Harness runtime
 
-The official 0.1.1-rc.2 release loads plugins through peer services. This
-manifest explicitly includes that release's peer-service closure, including
-the compatible Cordis runtime, so `--legacy-peer-deps` does not silently omit
-runtime imports or mix later Cordis APIs into this prerelease. package-lock.json
-pins every resolved archive and integrity. Update the manifest and lock together
-and boot the web profile with the WeHarbor MCP patch before accepting an update.
+The official npm `latest` release is pinned to 0.2.1-rc.2 (verified October 20,
+2026). Its declared dependencies and npm-resolved peers are pinned, with archive
+integrities, in package-lock.json. Update the manifest, lock and versions.lock.json
+together and boot the web profile with the WeHarbor MCP patch before accepting
+an update. This is an upstream release candidate.
 
 Use the Node/npm versions pinned in versions.lock.json. Install with
-`npm ci --legacy-peer-deps`. The launcher supplies `--expose-internals` for the
-release's HMR loader. No vendor source files are modified.
+`npm ci --omit=dev`. The launcher supplies `--expose-internals` for the
+release's HMR loader and selects `--profile web` explicitly before global
+`--patch` overlays and web arguments.
+No vendor source files are modified.
+
+The loopback proxy captures the process launch URL without logging its token.
+A trusted initial page navigation exchanges it for the upstream signed HttpOnly
+browser cookie, scoped to `/assistant/`. APIs and WebSockets still require that
+cookie; cross-origin requests are rejected before origin translation. The outer
+WeHarbor gateway remains the access boundary. Model credentials are configured
+later in the official web UI.

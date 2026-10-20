@@ -72,7 +72,7 @@ class Network:
                 code, out, _ = await self.command('status', '--json')
                 if code == 0:
                     data = json.loads(out)
-                    ts.update(running=True, state=data.get('BackendState'), ips=data.get('TailscaleIPs', []))
+                    ts.update(running=True, state=data.get('BackendState'), ips=data.get('TailscaleIPs') or [])
             except (OSError, ValueError): pass
         cf = self.children.get('cloudflare')
         return {'tailscale': ts, 'cloudflare': {'installed': Path(CF).is_file(),

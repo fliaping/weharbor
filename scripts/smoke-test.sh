@@ -32,7 +32,10 @@ for relative in ['.local/share/com.alpha.guard', '.local/state/alpha']:
 PY
 # The base image hands PASSWORD to `openssl passwd`, which reads a leading "-" as an option.
 export PASSWORD="$(python3 -c 'import secrets; print("w" + secrets.token_urlsafe(24))')"
+# Chromium requires private temporary-directory modes, including under nested
+# fuse-overlayfs. DSH also loads native addons from its temporary cache.
 docker run -d --name "$container" --shm-size=1gb --cap-add SYS_PTRACE \
+    --tmpfs /tmp:rw,exec,nosuid,nodev,mode=1777 \
     -e CUSTOM_USER=weharbor -e PASSWORD -e PUID="${WEHARBOR_TEST_UID:-1000}" -e PGID="${WEHARBOR_TEST_GID:-1000}" \
     -e TZ=Asia/Shanghai -v "$test_directory/config:/config" \
     -p 127.0.0.1::3000 "$image" >/dev/null
@@ -51,7 +54,7 @@ if [[ "$ready" != true ]]; then
 fi
 export SMOKE_URL="http://$(docker port "$container" 3000/tcp | head -n 1)"
 python3 - <<'PY'
-import base64, json, os, struct, time, urllib.error, urllib.request
+import base64, html, http.cookiejar, json, os, re, struct, time, urllib.error, urllib.parse, urllib.request
 url = os.environ['SMOKE_URL'] + '/'
 try:
     urllib.request.urlopen(url, timeout=5)
@@ -60,10 +63,13 @@ except urllib.error.HTTPError as error:
 else:
     raise SystemExit('Browser unexpectedly allows anonymous access')
 headers = {'Authorization': 'Basic ' + base64.b64encode(('weharbor:' + os.environ['PASSWORD']).encode()).decode()}
+# DSH 0.2 exchanges its launch token for an HttpOnly browser session cookie.
+# Keep anonymous transport checks on urllib's separate default opener.
+browser = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 def wait_for(path, predicate=lambda response, body: response.status == 200):
     for attempt in range(120):
         try:
-            with urllib.request.urlopen(urllib.request.Request(url + path, headers=headers), timeout=5) as response:
+            with browser.open(urllib.request.Request(url + path, headers=headers), timeout=5) as response:
                 body = response.read()
                 if predicate(response, body): return body
         except (OSError, ValueError):
@@ -77,21 +83,37 @@ assert b'/analysis/_nuxt/' in analysis
 wait_for('analysis/agreement')
 wait_for('workspace/health')
 assistant = wait_for('assistant/', lambda r, b: r.status == 200 and b'<html' in b.lower())
-assert b'/assistant/assets/' in assistant
+scripts = re.findall(r'<script[^>]+src="([^"]+)"', assistant.decode())
+assert any('/assets/' in path for path in scripts), 'DSH entry script is absent'
+for path in scripts:
+    asset_url = urllib.parse.urljoin(url + 'assistant/', html.unescape(path))
+    assert asset_url.startswith(url + 'assistant/'), asset_url
+    with browser.open(urllib.request.Request(asset_url, headers=headers), timeout=15) as response:
+        assert response.status == 200 and response.read(), asset_url
 assert b'crypto.randomUUID' in assistant
 # Exercise an actual same-origin RPC through the proxy, not only the HTML shell.
-assistant_rpc = url + 'assistant/api/host.listDirectory'
+assistant_rpc = url + 'assistant/api/settings/describe'
 for origin, expected in [(os.environ['SMOKE_URL'], 200), ('https://evil.example', 403)]:
     payload = {'type':'client-request', 'rpcId':'weharbor-smoke',
-               'method':'host.listDirectory', 'payload':{'path':'/config'}}
+               'method':'settings/describe', 'payload':{'args':{}}}
     request = urllib.request.Request(assistant_rpc, data=json.dumps(payload).encode(),
         headers={**headers, 'Content-Type':'application/json', 'Origin':origin})
     try:
-        with urllib.request.urlopen(request, timeout=15) as response:
+        with browser.open(request, timeout=15) as response:
             assert response.status == expected
             assert json.load(response)['result']['ok'] is True
     except urllib.error.HTTPError as error:
         assert error.code == expected, (origin, error.code, error.read())
+payload = {'type':'client-request', 'rpcId':'weharbor-plugins',
+           'method':'pluginInventory/list', 'payload':{'args':{}}}
+request = urllib.request.Request(url + 'assistant/api/pluginInventory/list',
+    data=json.dumps(payload).encode(), headers={**headers,
+        'Content-Type':'application/json', 'Origin':os.environ['SMOKE_URL']})
+with browser.open(request, timeout=15) as response:
+    plugins = json.load(response)['result']
+    assert plugins['ok'] is True
+    assert any(p['entryId'] == 'include:weharbor-mcp' and p['fiberPhase'] == 'active'
+               for p in plugins['value']['entries'])
 with urllib.request.urlopen(url + 'workspace/skill/SKILL.md', timeout=5) as response:
     assert b'wechat_prepare_send' in response.read()
 for path in ['workspace/mcp', 'workspace/data/health']:
@@ -196,8 +218,22 @@ request = urllib.request.Request('http://127.0.0.1:8766/mcp',
     headers={'Authorization':'Bearer ' + token, 'Content-Type':'application/json'})
 with urllib.request.urlopen(request, timeout=5) as response:
     tools = json.load(response)['result']['tools']
-assert len(tools) == 12
-print('Authenticated MCP exposes twelve tools')
+assert len(tools) == 14
+assert {'wechat_open_chat', 'wechat_desktop_status'} <= {t['name'] for t in tools}
+print('Authenticated MCP exposes fourteen tools, including navigation and readiness')
+request = urllib.request.Request('http://127.0.0.1:8766/desktop/status',
+    headers={'Authorization':'Bearer ' + token})
+with urllib.request.urlopen(request, timeout=30) as response:
+    readiness = json.load(response)
+assert readiness['state'] == 'blocked', 'A fresh logged-out profile cannot be ready'
+assert readiness['code'] and readiness['recovery'] and isinstance(readiness['retryable'], bool)
+print('Fresh-profile desktop readiness reports a structured blocker')
+identity = subprocess.run(['s6-setuidgid', 'abc', 'sudo', '-n',
+    '/usr/local/bin/weharbor-capture-key'], input=json.dumps(
+        {'mode': 'session', 'account': 'synthetic'}),
+    text=True, capture_output=True, check=True, timeout=20)
+assert json.loads(identity.stdout) == {'verified': False, 'error': 'SESSION_IDENTITY_UNAVAILABLE'}
+print('Fixed privileged identity helper rejects an account absent from the fresh desktop')
 for relative in ['.local/share/com.alpha.guard', '.local/state/alpha']:
     root = Path('/config') / relative
     directory = root / 'weharbor-permission-fixture'
@@ -267,5 +303,34 @@ for executable in Path('/proc').glob('[0-9]*/exe'):
         continue
 assert clients, 'WeChat did not restart'
 print('Window helper, main-only maximize defaults and repeatable restart passed')
+PY
+# Docker may allocate a different ephemeral host port when restarting.
+export SMOKE_URL="http://$(docker port "$container" 3000/tcp | head -n 1)"
+python3 - <<'PY'
+import base64, http.cookiejar, json, os, time, urllib.error, urllib.request
+url = os.environ['SMOKE_URL'] + '/assistant/'
+headers = {'Authorization': 'Basic ' + base64.b64encode(
+    ('weharbor:' + os.environ['PASSWORD']).encode()).decode()}
+# A new browser must bootstrap against the restarted Harness, whose signing
+# state persists in the profile. Never depend on the old process's launch token.
+browser = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+for attempt in range(90):
+    try:
+        with browser.open(urllib.request.Request(url, headers=headers), timeout=5) as response:
+            page = response.read()
+            assert b'crypto.randomUUID' in page and b'assets/' in page
+        payload = {'type':'client-request', 'rpcId':'weharbor-restart',
+                   'method':'settings/describe', 'payload':{'args':{}}}
+        request = urllib.request.Request(url + 'api/settings/describe',
+            data=json.dumps(payload).encode(), headers={**headers,
+                'Content-Type':'application/json', 'Origin':os.environ['SMOKE_URL']})
+        with browser.open(request, timeout=15) as response:
+            assert json.load(response)['result']['ok'] is True
+        break
+    except (OSError, ValueError):
+        time.sleep(1)
+else:
+    raise SystemExit('Harness browser bootstrap/RPC failed after restart')
+print('Harness signed browser session and settings RPC passed after restart')
 PY
 printf '%s\n' 'WeHarbor fresh-profile smoke test passed, including restart'
