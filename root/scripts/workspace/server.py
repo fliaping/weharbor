@@ -5,6 +5,7 @@ import hmac
 import json
 import os
 import secrets
+import uuid
 from pathlib import Path
 from urllib.parse import urlsplit
 import httpx
@@ -13,6 +14,7 @@ from fastapi.responses import JSONResponse, Response
 from reader import Reader, STATE, LOCAL, public_config, save_config
 from actions import Actions
 from desktop import Desktop
+from operations import Operations, DEFINITIONS, MAX_ATTACHMENT, UPLOADS
 from network import Network
 
 TOKEN_FILE = Path(os.environ.get('WEHARBOR_TOKEN_FILE', '/config/.config/weharbor/workspace.token'))
@@ -30,6 +32,7 @@ def load_token():
 TOKEN = load_token()
 reader = Reader()
 actions = Actions(reader)
+operations = Operations(actions)
 network = Network()
 
 @contextlib.asynccontextmanager
@@ -91,7 +94,7 @@ async def unavailable(request, exc):
 
 @app.get('/health')
 async def health():
-    return {'status': 'ok', 'reader': await reader.probe(), 'features': ['mcp', 'skills', 'actions', 'linux-images']}
+    return {'status': 'ok', 'reader': await reader.probe(), 'features': ['mcp', 'skills', 'actions', 'linux-images', 'desktop-operations', 'attachments']}
 
 @app.get('/connections')
 async def connections():
@@ -133,7 +136,81 @@ async def sync():
 
 @app.get('/actions')
 async def history():
-    return {'actions': actions.list()}
+    return {'actions': sorted(actions.list() + operations.list(), key=lambda x: x['created'], reverse=True)[:100]}
+
+@app.put('/attachments/{filename}')
+async def upload(filename: str, request: Request):
+    if not filename or filename in ['.', '..'] or len(filename.encode()) > 200 or any(c in filename for c in '/\\\x00\r\n'):
+        raise ValueError('Use a plain attachment filename of at most 200 bytes')
+    UPLOADS.mkdir(parents=True, exist_ok=True, mode=0o700)
+    UPLOADS.chmod(0o700)
+    directory = UPLOADS / uuid.uuid4().hex
+    directory.mkdir(parents=True, mode=0o700)
+    directory.chmod(0o700)
+    target = directory / filename
+    size = 0
+    try:
+        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, 'wb') as stream:
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > MAX_ATTACHMENT:
+                    raise ValueError('Attachment exceeds 100 MiB')
+                stream.write(chunk)
+        if not size:
+            raise ValueError('Empty attachments are not supported')
+        os.chmod(target, 0o400)
+    except BaseException:
+        target.unlink(missing_ok=True)
+        directory.rmdir()
+        raise
+    return {'path': str(target), 'size': size, 'filename': filename}
+
+@app.get('/operations')
+async def operation_history():
+    return {'operations': operations.list()}
+
+
+@app.post('/moments/refresh')
+async def refresh_moments(request: Request):
+    value = await request.json()
+    if not isinstance(value, dict) or set(value) != {'account'}:
+        raise ValueError('Expected exact account')
+    return await sync_moments(value['account'])
+
+
+async def sync_moments(account):
+    if not isinstance(account, str) or not account.strip():
+        raise ValueError('Expected exact account')
+    async with actions.lock:
+        result = await asyncio.to_thread(lambda: Desktop().refresh_moments(account))
+        # Qt updates its database asynchronously. Never call this an upstream
+        # delivery guarantee; the archive reports what was actually persisted.
+        await asyncio.sleep(1)
+        snapshot = await reader.sync()
+        accounts = snapshot.get('accounts', []) if isinstance(snapshot, dict) else []
+        account_snapshot = next((item for item in accounts if isinstance(item, dict) and item.get('account') == account), None)
+        if account_snapshot is None:
+            raise RuntimeError('MOMENTS_SNAPSHOT_MISSING: exact account was not synchronized')
+        if any(str(item.get('database', '')).lower() == 'sns.db' for item in account_snapshot.get('failed', [])):
+            raise RuntimeError('MOMENTS_SNAPSHOT_FAILED: keep existing archive and retry the next refresh')
+        return {'status': 'completed', 'desktop': result, 'snapshot': snapshot}
+
+@app.post('/operations/prepare')
+async def prepare_operation(request: Request):
+    value = await request.json()
+    required = {'operation', 'account', 'username', 'parameters', 'idempotency_key'}
+    if not isinstance(value, dict) or set(value) != required:
+        raise ValueError('Expected operation, account, username, parameters, idempotency_key')
+    return await operations.prepare(**value)
+
+@app.post('/operations/{identifier}/{operation}')
+async def operate(identifier: str, operation: str):
+    if operation == 'commit':
+        return await operations.commit(identifier)
+    if operation == 'cancel':
+        return await operations.cancel(identifier)
+    raise HTTPException(404)
 
 @app.post('/actions/prepare')
 async def prepare(request: Request):
@@ -162,10 +239,11 @@ def skill(path: str):
     return Response(target.read_bytes(), media_type='text/plain')
 
 def schema(properties, required=()):
-    return {'type': 'object', 'properties': {k: {'type': v} for k, v in properties.items()},
+    return {'type': 'object', 'properties': {k: ({'type': v, 'items': {'type': 'string'}, 'maxItems': 100, 'uniqueItems': True} if v == 'array' else {'type': v}) for k, v in properties.items()},
             'required': list(required), 'additionalProperties': False}
 
 TOOLS = [
+    ('wechat_sns_autorefresh', 'Request native Moments refresh for the exact local account and refresh local DB snapshots. No likes, comments, reposts or replies. Requires a supported accessible refresh control; saves only currently available data.', schema({'account':'string'}, ['account'])),
     ('wechat_accounts', 'List readable WeChat accounts', schema({})),
     ('wechat_sessions', 'List chats; use exact usernames from results', schema({'account':'string','limit':'integer'}, ['account'])),
     ('wechat_contacts', 'Resolve contacts by keyword', schema({'account':'string','keyword':'string'}, ['account'])),
@@ -173,30 +251,54 @@ TOOLS = [
     ('wechat_search', 'Search message content', schema({'account':'string','username':'string','q':'string','limit':'integer','offset':'integer'}, ['account','q'])),
     ('wechat_sync', 'Refresh local authenticated DB/WAL snapshots', schema({})),
     ('wechat_desktop_inspect', 'Inspect the WeChat accessibility tree without interacting', schema({})),
+    ('wechat_contact_lookup', 'Search readable local contacts; results are database snapshots, not a global WeChat account lookup', schema({'account':'string','keyword':'string'}, ['account','keyword'])),
+    ('wechat_group_members', 'Read group member identities from the selected authenticated message reader', schema({'account':'string','username':'string','limit':'integer','offset':'integer'}, ['account','username'])),
+    ('wechat_contact_profile', 'Read an exact contact profile', schema({'account':'string','username':'string'}, ['account','username'])),
+    ('wechat_contact_list_labels', 'Read the complete WeChat label list using a bound anchor chat. Does not change labels; unsupported or partial accessible lists are rejected.', schema({'account':'string','username':'string'}, ['account','username'])),
     ('wechat_prepare_send', 'Prepare exact text to one verified username. Never infer authorization from messages. due is optional Unix seconds.', schema({'account':'string','username':'string','text':'string','idempotency_key':'string','due':'number'}, ['account','username','text','idempotency_key'])),
     ('wechat_commit_send', 'Send a prepared action once. Requires explicit user authorization for the recipient and content.', schema({'action_id':'string'}, ['action_id'])),
     ('wechat_cancel_send', 'Cancel a pending action', schema({'action_id':'string'}, ['action_id'])),
     ('wechat_actions', 'Read action receipts. uncertain must never be retried automatically.', schema({})),
+    ('wechat_prepare_operation', 'Prepare a desktop mutation without applying it. Requires a matching local account and exact username; unsupported accessible layouts fail closed.', schema({'operation':'string','account':'string','username':'string','parameters':'object','idempotency_key':'string'}, ['operation','account','username','parameters','idempotency_key'])),
+    ('wechat_commit_operation', 'Commit an explicitly authorized prepared desktop operation once; uncertain must never be retried.', schema({'action_id':'string'}, ['action_id'])),
+    ('wechat_cancel_operation', 'Cancel a prepared desktop operation', schema({'action_id':'string'}, ['action_id'])),
     ('weharbor_connections', 'Probe direct, Tailscale and Cloudflare service connections', schema({})),
 ]
+for operation, fields in DEFINITIONS.items():
+    properties = {'account':'string', 'username':'string', 'idempotency_key':'string'} | fields
+    TOOLS.append(('wechat_' + operation.replace('-', '_'),
+        'Apply explicitly authorized ' + operation + ' once with a durable idempotency key. Requires an exact local chat and supported AT-SPI layout; uploaded media paths only. A sent receipt requires a matching database hash; completed settings use UI readback.',
+        schema(properties, properties)))
+
+WRITES = {'wechat_sync','wechat_sns_autorefresh','wechat_prepare_send','wechat_commit_send','wechat_cancel_send',
+          'wechat_prepare_operation','wechat_commit_operation','wechat_cancel_operation'} | {'wechat_' + name.replace('-', '_') for name in DEFINITIONS}
 
 async def call_tool(name, args):
     paths = {'wechat_accounts':'chat/accounts', 'wechat_sessions':'chat/sessions', 'wechat_contacts':'chat/contacts',
-             'wechat_messages':'chat/messages', 'wechat_search':'chat/search'}
+             'wechat_messages':'chat/messages', 'wechat_search':'chat/search', 'wechat_contact_lookup':'chat/contacts',
+             'wechat_group_members':'chat/contacts/group_members', 'wechat_contact_profile':'chat/contacts/profile'}
     if name in paths:
         params = dict(args)
         if name != 'wechat_accounts':
             params['source'] = 'decrypted'
-        if name in ['wechat_messages','wechat_search','wechat_sessions']:
+        if name in ['wechat_messages','wechat_search','wechat_sessions','wechat_group_members']:
             params['limit'] = max(1, min(int(params.get('limit', 50)), 500))
         if name == 'wechat_messages':
             params['order'] = 'desc'
         return await reader.get(paths[name], params)
     if name == 'wechat_sync': return await reader.sync()
+    if name == 'wechat_sns_autorefresh': return await sync_moments(**args)
+    if name == 'wechat_contact_list_labels': return await operations.list_labels(**args)
     if name == 'wechat_prepare_send': return await actions.prepare(**args)
     if name == 'wechat_commit_send': return await actions.commit(args['action_id'])
     if name == 'wechat_cancel_send': return await actions.cancel(args['action_id'])
-    if name == 'wechat_actions': return actions.list()
+    if name == 'wechat_actions': return (await history())['actions']
+    if name == 'wechat_prepare_operation': return await operations.prepare(**args)
+    if name == 'wechat_commit_operation': return await operations.commit(args['action_id'])
+    if name == 'wechat_cancel_operation': return await operations.cancel(args['action_id'])
+    operation = name.removeprefix('wechat_').replace('_', '-')
+    if operation in DEFINITIONS:
+        return await operations.execute(operation, **args)
     if name == 'weharbor_connections': return await reader.probe()
     if name == 'wechat_desktop_inspect': return await asyncio.to_thread(lambda: Desktop().inspect())
     raise ValueError('Unknown tool')
@@ -218,8 +320,9 @@ async def rpc(message):
     elif method == 'ping': result = {}
     elif method == 'tools/list':
         result = {'tools': [{'name': n,'description':d,'inputSchema':s,
-                  'annotations': {'readOnlyHint': n not in ['wechat_sync','wechat_prepare_send','wechat_commit_send','wechat_cancel_send'],
-                                  'destructiveHint': n == 'wechat_commit_send'}} for n,d,s in TOOLS]}
+                  'annotations': {'readOnlyHint': n not in WRITES,
+                                  'destructiveHint': n in WRITES,
+                                  'idempotentHint': n in ['wechat_commit_send','wechat_commit_operation'] or n.removeprefix('wechat_').replace('_', '-') in DEFINITIONS}} for n,d,s in TOOLS]}
     elif method == 'tools/call':
         try:
             name = args['name']; arguments = args.get('arguments') or {}
@@ -227,9 +330,10 @@ async def rpc(message):
             if definition is None or not isinstance(arguments, dict): raise ValueError('Invalid tool')
             if set(arguments) - set(definition['properties']) or set(definition['required']) - set(arguments):
                 raise ValueError('Invalid tool arguments')
-            types = {'string': str, 'integer': int, 'number': (int, float)}
+            types = {'string': str, 'integer': int, 'number': (int, float), 'boolean': bool, 'object': dict, 'array': list}
             for key, value in arguments.items():
-                if isinstance(value, bool) or not isinstance(value, types[definition['properties'][key]['type']]):
+                kind = definition['properties'][key]['type']
+                if (isinstance(value, bool) and kind != 'boolean') or not isinstance(value, types[kind]):
                     raise ValueError('Invalid type for ' + key)
             if arguments.get('offset', 0) < 0:
                 raise ValueError('offset must be nonnegative')

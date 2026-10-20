@@ -14,7 +14,9 @@ Selkies 2.0 基础镜像（Debian trixie），把官方 Linux 微信和 Alpha �
 
 集成工作区开发版：边缘挂件可全屏切换桌面、Linux 聊天分析、DeepSeek
 Harness 和连接设置。支持已有 WeFlow 密钥、数据库/WAL 与图片解密、
-独立 MCP/Skill，以及带回执的桌面 Action。配置和限制见
+独立 MCP/Skill，以及带回执的桌面 Action。Harness 同时加载微信工具和分析工作台工具，
+可读取数据、按授权发送消息、管理自动化任务及连续刷新保存朋友圈。
+分析工作台开放全部功能入口，并分别标明已实现、待连接与尚未实现。配置和限制见
 [工作区说明](docs/workspace.md)。
 
 ## 当前状态

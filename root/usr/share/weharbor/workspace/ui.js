@@ -43,7 +43,7 @@
     const table = document.createElement('table');
     table.innerHTML = '<thead><tr><th scope="col">时间</th><th scope="col">目标账号</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead>';
     const body = document.createElement('tbody');
-    const labels = {prepared:'待提交',scheduled:'已定时',submitted:'已提交',sent:'已发送',uncertain:'待核对',failed:'失败',cancelled:'已取消',expired:'已过期'};
+    const labels = {prepared:'待提交',scheduled:'已定时',submitted:'已提交',sent:'已发送',completed:'已完成',uncertain:'待核对',failed:'失败',cancelled:'已取消',expired:'已过期'};
     for (const a of history.actions) {
       const row = document.createElement('tr');
       for (const value of [new Date((a.due || a.created)*1000).toLocaleString(), a.username, labels[a.status] || a.status]) {
@@ -52,7 +52,7 @@
       const cell = document.createElement('td');
       if (['prepared','scheduled'].includes(a.status)) {
         const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = '取消';
-        cancel.addEventListener('click', () => run(cancel, async () => { await api('actions/'+a.id+'/cancel', {}); await refresh(); })); cell.append(cancel);
+        cancel.addEventListener('click', () => run(cancel, async () => { await api((a.operation ? 'operations/' : 'actions/')+a.id+'/cancel', {}); await refresh(); })); cell.append(cancel);
       } else cell.textContent = a.status === 'uncertain' ? '请在微信核对' : '—';
       row.append(cell); body.append(row);
     }

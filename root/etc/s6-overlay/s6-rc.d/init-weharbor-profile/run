@@ -13,6 +13,7 @@ done
 skill_root=/config/.local/share/weharbor/assistant-workspace/.agents/skills
 mkdir -p "${skill_root}"
 ln -sfn /usr/share/weharbor/skills/weharbor-api "${skill_root}/weharbor-api"
+ln -sfn /opt/weharbor/analysis/src/wechat_decrypt_tool/advanced "${skill_root}/wechat-analysis-actions"
 chown -R abc:abc /config/.local/share/weharbor/assistant-workspace/.agents
 stamp="$(date +%Y%m%d%H%M%S)"
 for name in autostart menu.xml; do

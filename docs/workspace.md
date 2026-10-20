@@ -60,8 +60,14 @@ auth. Foreign browser Origin headers are rejected.
 ## AI and Actions
 
 Official `@deepseek-ai/dsh` is pinned through npm's integrity lock. The web
-launcher adds the local WeHarbor MCP client, and the assistant workspace contains
-the portable skill. Configure your model credentials in Harness's own setup UI;
+launcher adds the local WeHarbor MCP client and the analysis service's 19
+MCP tools for reads, capability discovery, actions, receipts, tasks and local
+analysis edits. The assistant workspace registers `weharbor-api` and
+`wechat-analysis-actions` as filesystem Skills, so official Harness can discover
+both workflows without resource support in the MCP client. The analysis Skill
+is also available as the MCP resource `wechat-analysis://skill`.
+Both clients read their own local token files; tokens stay outside the patch.
+Configure your model credentials in Harness's own setup UI;
 WeHarbor does not copy Alpha/WeFlow credentials into Harness. Its state is
 `/config/.local/share/weharbor/harness`.
 
@@ -81,3 +87,65 @@ recipient delivery. Account login, real accessibility layouts, model API access,
 Tailscale authorization and Cloudflare routing require deployment validation;
 synthetic unit tests cannot prove them. See [the validation report](workspace-validation.md) for the actual
 checks performed on this deployment.
+
+## Desktop operations in local source
+
+The local source exposes 33 MCP tools. Thirteen desktop operations cover sending
+files, images and videos, marking a chat read, setting mute, editing a contact
+remark, changing a group name, own group nickname or group notice, and creating,
+assigning, renaming and deleting contact labels. Read-only tools query existing
+contact profiles, contact matches, group members and a complete accessible label
+list. Contact lookup does not search for new WeChat users online. Label names
+must be exact and unique; set-labels replaces the entire selection, including
+clearing it with an empty array. Deleting a label affects its uses across the
+account but never deletes contacts. Existing user label dialogs are preserved.
+
+Upload bytes with PUT /workspace/attachments/{filename}; the private upload limit
+is 100 MiB. Uploading has no sending side effect. Use POST
+/workspace/operations/prepare, then /workspace/operations/{id}/commit or /cancel.
+Preparation expires after 120 seconds. The combined /workspace/actions history
+includes these operations and text sends, with stable idempotency keys.
+
+Desktop writes serialize with text sends. Commit rechecks account, context,
+draft and attachment bytes before crossing the submission boundary. Settings
+require a persisted UI readback; media require a unique new matching database
+self-message. Unverifiable or interrupted submissions remain uncertain and are
+never retried automatically. Unsupported accessibility layouts fail explicitly.
+These paths have synthetic driver and receipt tests; actual WeChat layouts and
+attachment transformations still require validation on an authorized account.
+The matching analysis workbench has 48 / 79 code execution paths. All 79 entries
+are unlocked; each shows availability, missing connection or missing implementation
+without a premium interception popup. Onboarding
+can include mark-read as its first explicitly configured step to navigate to
+each exact new contact. It validates complete contact snapshots and records a
+baseline on activation; optional targets restrict which newcomers are handled.
+
+Moments refresh activates only an exact native refresh control for a verified
+account, then synchronizes the local snapshot. Missing accounts and failed SNS
+snapshots do not return success. The continuous archive task saves HTML or JSON
+and accessible media incrementally to its stable private task folder, at a
+minimum 30-second interval. Existing baselines survive restart; missing media
+can be retried. Refresh does not prove complete upstream history. Task receipts
+retain output paths and export warnings. No likes, comments, reposts or replies
+are performed; legacy Moments interaction tasks cannot start or resume.
+
+## Build matching local analysis source
+
+The regular image continues to use the pinned analysis archive. To include
+changes from an explicit local analysis checkout, create a new build context:
+
+~~~bash
+python3 scripts/package-workspace.py \
+  --analysis /config/Workspace/WeChatDataAnalysis \
+  --output /config/.local/share/weharbor-build/context
+docker build --platform linux/amd64 -t weharbor:workspace-local \
+  /config/.local/share/weharbor-build/context
+scripts/smoke-test.sh weharbor:workspace-local
+~~~
+
+The output directory must not already exist. Packaging excludes credentials,
+profiles, generated frontend output and dependencies. It verifies the pinned
+vendor assets, records the analysis source checksum, and changes only the
+generated context's analysis lock entry. The repository's canonical lock and
+upstream WeChat/Alpha applications remain unchanged. Keep the previous image
+and profile backup available until instance validation passes.

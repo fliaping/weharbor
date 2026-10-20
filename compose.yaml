@@ -5,6 +5,10 @@ services:
     platform: linux/amd64
     restart: unless-stopped
     shm_size: ${SHM_SIZE:-1gb}
+    # Chromium singleton sockets require normal private-directory permissions.
+    # NAS ACL inheritance on the image filesystem can override mkdir(0700).
+    tmpfs:
+      - /tmp:rw,mode=1777,size=1g
     volumes:
       - ${DATA_DIR:-./data}:/config
     ports:

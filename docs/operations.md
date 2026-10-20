@@ -28,6 +28,12 @@ Alpha 的 HTTP API 未启用时不会因此判定故障；启用后 /health 会�
 无法修复时会输出具体错误并停止本次启动，请检查卷是否只读及 PUID/PGID 是否正确。
 升级后通过网页重启 Alpha 或重启容器即可应用；日志位于 /config/.local/log/alpha.log。
 
+Compose 还将容器内的 /tmp 配置为 1 GiB tmpfs，避免 NAS ACL 继承改变 Chromium
+临时目录权限，导致进程锁初始化报 Socket path too long 并退出。已有部署使用
+Compose 覆盖文件时，也需加入 tmpfs: ["/tmp:rw,mode=1777,size=1g"] 后重新创建容器。
+直接 docker run 时使用 --tmpfs /tmp:rw,mode=1777,size=1g。这里只挂载容器的
+临时目录，/config 中的登录数据与配置仍由原持久化卷保存。
+
 ## 备份与更新
 
 先停止容器，再备份完整数据目录及 .env：

@@ -9,7 +9,7 @@ import time
 from types import SimpleNamespace
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 if importlib.util.find_spec('httpx') is None or importlib.util.find_spec('fastapi') is None:
     raise unittest.SkipTest('Install requirements-workspace-dev.txt for workspace tests')
@@ -242,6 +242,28 @@ class McpTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(await self.server.rpc({'method':'notifications/initialized'}))
         malformed = await self.server.rpc({'id':4,'method':'tools/call','params':[]})
         self.assertEqual(malformed['error']['code'], -32602)
+
+    async def test_moments_refresh_uses_authenticated_tool_and_local_snapshot_sync(self):
+        with patch.object(self.server, 'Desktop') as driver, \
+             patch.object(self.server.reader, 'sync', new=AsyncMock(return_value={'accounts': [{'account': 'exact', 'failed': []}]})) as sync, \
+             patch.object(self.server.asyncio, 'sleep', new=AsyncMock()):
+            driver.return_value.refresh_moments.return_value = {'refresh_requested': True}
+            result = await self.server.rpc({'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+                'params': {'name': 'wechat_sns_autorefresh', 'arguments': {'account': 'exact'}}})
+            self.assertNotIn('isError', result['result'])
+            driver.return_value.refresh_moments.assert_called_once_with('exact')
+            sync.assert_awaited_once()
+            denied = self.client.post('/moments/refresh', json={'account': 'exact'})
+            self.assertEqual(denied.status_code, 401)
+
+    async def test_moments_refresh_rejects_missing_account_and_failed_sns_snapshot(self):
+        with patch.object(self.server, 'Desktop'), patch.object(self.server.asyncio, 'sleep', new=AsyncMock()):
+            for snapshot in ({'accounts': []}, {'accounts': [{'account': 'other', 'failed': []}]},
+                             {'accounts': [{'account': 'exact', 'failed': [{'database': 'sns.db', 'error': 'ValueError'}]}]}):
+                with self.subTest(snapshot=snapshot), patch.object(self.server.reader, 'sync', new=AsyncMock(return_value=snapshot)):
+                    result = await self.server.rpc({'id': 1, 'method': 'tools/call',
+                        'params': {'name': 'wechat_sns_autorefresh', 'arguments': {'account': 'exact'}}})
+                    self.assertTrue(result['result']['isError'])
 
 class DesktopIdentityTests(unittest.TestCase):
     class Node:

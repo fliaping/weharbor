@@ -32,7 +32,7 @@ for relative in ['.local/share/com.alpha.guard', '.local/state/alpha']:
 PY
 # The base image hands PASSWORD to `openssl passwd`, which reads a leading "-" as an option.
 export PASSWORD="$(python3 -c 'import secrets; print("w" + secrets.token_urlsafe(24))')"
-docker run -d --name "$container" --shm-size=1gb --cap-add SYS_PTRACE \
+docker run -d --name "$container" --shm-size=1gb --tmpfs /tmp:rw,mode=1777,size=1g --cap-add SYS_PTRACE \
     -e CUSTOM_USER=weharbor -e PASSWORD -e PUID="${WEHARBOR_TEST_UID:-1000}" -e PGID="${WEHARBOR_TEST_GID:-1000}" \
     -e TZ=Asia/Shanghai -v "$test_directory/config:/config" \
     -p 127.0.0.1::3000 "$image" >/dev/null
@@ -72,6 +72,32 @@ def wait_for(path, predicate=lambda response, body: response.status == 200):
     raise SystemExit('Service did not become ready: ' + path)
 wait_for('notifications/apps', lambda r, b: all(json.loads(b)[a]['running'] and json.loads(b)[a]['windows'] for a in ['wechat','alpha']))
 wait_for('analysis/api/health')
+capabilities = json.loads(wait_for('analysis/api/advanced/capabilities'))
+assert capabilities['counts'] == {'total': 79, 'available': 48}, capabilities['counts']
+assert capabilities['features']['contact-search']['state'] == 'blocked'
+assert capabilities['features']['send-file']['state'] == 'available'
+assert capabilities['features']['contact-list-labels']['state'] == 'available'
+assert capabilities['features']['automation-onboarding']['state'] == 'available'
+assert capabilities['features']['automation-moments-sync']['state'] == 'available'
+assert 'automation-moments-follow' not in capabilities['features']
+assert all(value['unlocked'] for value in capabilities['features'].values())
+# Exercise browser -> nginx -> analysis -> authenticated workspace streaming.
+# Upload only; do not prepare or send anything to a WeChat account.
+upload = url + 'analysis/api/advanced/attachments/weharbor-smoke.bin'
+sample = b'WeHarbor private upload fixture\n' * 70000
+for origin, expected in [('https://evil.example', 403), (os.environ['SMOKE_URL'], 200)]:
+    request = urllib.request.Request(upload, method='PUT', data=sample,
+        headers={**headers, 'Content-Type':'application/octet-stream', 'Origin':origin})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            assert response.status == expected
+            result = json.load(response)
+            assert result['size'] == len(sample)
+            assert result['filename'] == 'weharbor-smoke.bin'
+            assert result['path'].startswith('/config/.local/share/weharbor/uploads/')
+    except urllib.error.HTTPError as error:
+        assert error.code == expected, (origin, error.code, error.read())
+print('48 advanced execution paths and private streaming upload passed; no WeChat action submitted')
 analysis = wait_for('analysis/')
 assert b'/analysis/_nuxt/' in analysis
 wait_for('analysis/agreement')
@@ -92,6 +118,21 @@ for origin, expected in [(os.environ['SMOKE_URL'], 200), ('https://evil.example'
             assert json.load(response)['result']['ok'] is True
     except urllib.error.HTTPError as error:
         assert error.code == expected, (origin, error.code, error.read())
+def harness_rpc(method, payload):
+    request = urllib.request.Request(url + 'assistant/api/' + method,
+        data=json.dumps({'type':'client-request', 'rpcId':'weharbor-skill-smoke',
+                         'method':method, 'payload':payload}).encode(),
+        headers={**headers, 'Content-Type':'application/json', 'Origin':os.environ['SMOKE_URL']})
+    with urllib.request.urlopen(request, timeout=20) as response:
+        result = json.load(response)['result']
+        assert result['ok'] is True, result
+        return result['value']
+# A local empty session exercises official Skill discovery without a model call.
+session = harness_rpc('session.create', {'cwd':'/config/.local/share/weharbor/assistant-workspace'})
+skills = harness_rpc('skill.list', {'sessionId':session['sessionId']})['skills']
+assert any(skill['name'] == 'weharbor-api' and skill['modelInvocable'] for skill in skills), skills
+assert any(skill['name'] == 'wechat-analysis-actions' and skill['modelInvocable'] for skill in skills), skills
+print('Official Harness discovers the WeHarbor action/automation Skill; no model request made')
 with urllib.request.urlopen(url + 'workspace/skill/SKILL.md', timeout=5) as response:
     assert b'wechat_prepare_send' in response.read()
 for path in ['workspace/mcp', 'workspace/data/health']:
@@ -196,8 +237,41 @@ request = urllib.request.Request('http://127.0.0.1:8766/mcp',
     headers={'Authorization':'Bearer ' + token, 'Content-Type':'application/json'})
 with urllib.request.urlopen(request, timeout=5) as response:
     tools = json.load(response)['result']['tools']
-assert len(tools) == 12
-print('Authenticated MCP exposes twelve tools')
+assert len(tools) == 33
+assert {'wechat_send_file', 'wechat_chat_set_mute', 'wechat_prepare_operation', 'wechat_contact_list_labels', 'wechat_contact_set_labels'} <= {t['name'] for t in tools}
+by_name = {t['name']: t for t in tools}
+assert by_name['wechat_contact_list_labels']['annotations']['readOnlyHint'] is True
+assert by_name['wechat_contact_set_labels']['inputSchema']['properties']['labels']['items'] == {'type': 'string'}
+assert by_name['wechat_sns_autorefresh']['annotations']['readOnlyHint'] is False
+print('Authenticated MCP exposes 33 tools')
+payload = json.dumps({'jsonrpc':'2.0','id':2,'method':'tools/list'}) + '\n'
+result = subprocess.run(['s6-setuidgid', 'abc', 'env',
+    'WECHAT_ANALYSIS_MCP_TOKEN_FILE=/config/.local/share/weharbor/analysis/advanced/mcp.token',
+    '/opt/weharbor/python/bin/python', '/opt/weharbor/analysis/scripts/advanced_mcp_stdio.py'],
+    input=payload, capture_output=True, text=True, timeout=15, check=True)
+analysis_tools = json.loads(result.stdout)['result']['tools']
+assert len(analysis_tools) == 19
+assert sum(tool['annotations']['readOnlyHint'] for tool in analysis_tools) == 12
+assert {'wechat_prepare_action', 'wechat_commit_action', 'wechat_create_task', 'wechat_timeline'} <= {tool['name'] for tool in analysis_tools}
+assert 'wechat-analysis-mcp' in Path('/usr/share/weharbor/harness-mcp.yml').read_text()
+analysis_token = Path('/config/.local/share/weharbor/analysis/advanced/mcp.token')
+assert stat.S_IMODE(analysis_token.stat().st_mode) == 0o600
+assert stat.S_IMODE(analysis_token.parent.stat().st_mode) == 0o700
+skill_request = json.dumps({'jsonrpc':'2.0','id':3,'method':'resources/read','params':{'uri':'wechat-analysis://skill'}}) + '\n'
+skill_result = subprocess.run(['s6-setuidgid', 'abc', 'env',
+    'WECHAT_ANALYSIS_MCP_TOKEN_FILE=/config/.local/share/weharbor/analysis/advanced/mcp.token',
+    '/opt/weharbor/python/bin/python', '/opt/weharbor/analysis/scripts/advanced_mcp_stdio.py'],
+    input=skill_request, capture_output=True, text=True, timeout=15, check=True)
+assert 'automation-moments-sync' in json.loads(skill_result.stdout)['result']['contents'][0]['text']
+assert 'wechat_create_task' in Path('/usr/share/weharbor/skills/weharbor-api/SKILL.md').read_text()
+print('Harness analysis stdio bridge exposes 19 authenticated tools and the action/automation Skill')
+uploads = list(Path('/config/.local/share/weharbor/uploads').glob('*/weharbor-smoke.bin'))
+assert len(uploads) == 1
+assert uploads[0].read_bytes() == b'WeHarbor private upload fixture\n' * 70000
+assert stat.S_IMODE(uploads[0].stat().st_mode) == 0o400
+assert stat.S_IMODE(uploads[0].parent.stat().st_mode) == 0o700
+assert stat.S_IMODE(uploads[0].parent.parent.stat().st_mode) == 0o700
+print('Uploaded bytes and private permissions verified')
 for relative in ['.local/share/com.alpha.guard', '.local/state/alpha']:
     root = Path('/config') / relative
     directory = root / 'weharbor-permission-fixture'

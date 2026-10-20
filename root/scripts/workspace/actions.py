@@ -6,6 +6,7 @@ import os
 import sqlite3
 import time
 import uuid
+from contextlib import contextmanager
 from reader import STATE
 from desktop import Desktop
 
@@ -42,10 +43,15 @@ class Actions:
             db.execute("UPDATE actions SET status='uncertain' WHERE status='submitted'")
         os.chmod(self.path, 0o600)
 
+    @contextmanager
     def db(self):
         c = sqlite3.connect(self.path)
         c.row_factory = sqlite3.Row
-        return c
+        try:
+            with c:
+                yield c
+        finally:
+            c.close()
 
     def get(self, action_id):
         with self.db() as db:
@@ -56,7 +62,7 @@ class Actions:
 
     def list(self):
         with self.db() as db:
-            return [dict(r) for r in db.execute('SELECT id,account,username,status,created,due,receipt FROM actions ORDER BY created DESC LIMIT 100')]
+            return [dict(r) for r in db.execute('SELECT id,idem AS idempotency_key,account,username,status,created,due,receipt FROM actions ORDER BY created DESC LIMIT 100')]
 
     def update(self, action_id, status, receipt=''):
         with self.db() as db:
@@ -92,6 +98,8 @@ class Actions:
             raise ValueError('Schedule must be in the next year (Unix seconds)')
         async with self.lock:
             with self.db() as db:
+                if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='operations'").fetchone() and db.execute('SELECT 1 FROM operations WHERE idem=?', (idempotency_key,)).fetchone():
+                    raise ValueError('Idempotency key already belongs to a desktop operation')
                 old = db.execute('SELECT id,account,username,text,due FROM actions WHERE idem=?', (idempotency_key,)).fetchone()
             if old:
                 if (old['account'], old['username'], old['text'], old['due']) != (account, username, text, due):
