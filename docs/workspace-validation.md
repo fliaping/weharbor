@@ -7,11 +7,11 @@ not committed. The preceding baseline image was
 
 ## October 20 event-sync and Harness update
 
-- Analysis fork pinned to `fd61b10d24ba2aaabc08f39f53a2cbb7486668cd`: Linux
+- Analysis fork pinned to `f9be0a3a1bd0e9abfff5d1563ea29dbb35f28b24`: Linux
   DB/WAL notifications debounce for 150 ms, with a two-second fallback scan.
   Revision SSE checks run every 200 ms. The target is 1–3 seconds after a
   stable database write; decryption duration still limits actual latency.
-- Passed 69 targeted analysis tests and 91 integration/source tests. The
+- Passed 70 targeted analysis tests and 91 integration/source tests. The
   filesystem test exercises writes and rename replacement, while existing
   tests cover authenticated decryption, WAL recovery and publication failures.
 - DSH `0.2.1-rc.2` was the official npm latest on October 20, 2026. A fresh
