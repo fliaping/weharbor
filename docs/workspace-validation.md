@@ -6,6 +6,19 @@ not committed. The preceding baseline image was
 `sha256:5e7b6ef5b43e12e135251d23f51076e6b81a540c507a43e2c59584f67ceb5d7c`.
 The historical build reports below describe their deployment state at the time.
 
+## October 20 agreement removal
+
+Analysis revision `61b31433d18bb638b5f51dbdeb1a461c16d84cfe` removes the
+first-use notice, disclaimer, countdown, bootstrap redirect and route guard.
+Existing `/analysis/agreement` bookmarks return immediately to the analysis
+home page. Account loading, privacy settings and desktop updates initialize
+without requiring an agreement flag in browser storage.
+
+Frontend validation passed 66 Node tests, 116 Vitest tests and a production
+static build under `/analysis/`. A fresh browser rendered the hydrated home
+and advanced pages without the agreement overlay; the legacy agreement URL
+returned to the home page. WeHarbor source validation passed all 162 tests.
+
 ## October 20 unified build
 
 The unified source combines the advanced workspace, continuous Moments archive,

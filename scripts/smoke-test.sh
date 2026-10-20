@@ -106,6 +106,8 @@ for origin, expected in [('https://evil.example', 403), (os.environ['SMOKE_URL']
 print('48 advanced execution paths and private streaming upload passed; no WeChat action submitted')
 analysis = wait_for('analysis/')
 assert b'/analysis/_nuxt/' in analysis
+assert b'ui.first_use_agreement' not in analysis
+assert b'first-use-route-guard' not in analysis
 wait_for('analysis/agreement')
 wait_for('workspace/health')
 assistant = wait_for('assistant/', lambda r, b: r.status == 200 and b'<html' in b.lower())
