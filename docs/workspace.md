@@ -79,6 +79,12 @@ revision, desktop checks and persistent receipt. Scheduling uses the same
 checks and requires the selected target chat to remain ready at the due time.
 Preparation alone never schedules a send: commit activates a future action.
 The independent AT-SPI driver does not patch WeChat or copy Qibox code/offsets.
+Qt's search editor is disambiguated inside the titled chat pane. For the painted
+Send button absent from AT-SPI, local Tesseract OCR must recognize one complete
+Send caption with at least 80% confidence per word inside the composer's right
+toolbar region and enabled green button. X11 geometry corrects Qt high-DPI
+coordinates, and a moved or changed window prevents clicking. No screenshot or
+chat text is sent to an OCR service.
 It verifies the open account from process file descriptors. A fixed root helper
 reads the original WeChat process without writing or injecting code. Qt metadata
 in the installed ELF identifies the session-loaded handler and derives the

@@ -101,30 +101,47 @@ class Desktop:
                 or evidence.get('username') != binding['username']):
             raise DesktopError('CHAT_IDENTITY_UNVERIFIED: unlock WeChat and open the exact target chat')
 
-    def _controls(self, binding):
+    def _controls(self, binding, require_send=False):
         self._account(binding['account'])
         nodes = self.nodes()
         editors = [n for n in nodes if n.get_state_set().contains(self.a.StateType.EDITABLE)
                    and n.get_state_set().contains(self.a.StateType.MULTI_LINE)
                    and self._visible(n)]
         sends = [n for n in nodes if n.get_name() in ['发送', 'Send'] and n.get_role_name() in ['button', 'push button'] and self._visible(n)]
-        if len(editors) != 1 or len(sends) != 1:
-            raise DesktopError('CHAT_CONTROLS_AMBIGUOUS')
         self._identity(binding)
         # Use the chat pane containing the editor, not the contact sidebar or
         # invisible cached Qt widgets. The read-only Qt session identity must
         # match the exact account/username as well as a unique visible DB title.
-        pane = editors[0].get_parent()
-        for _ in range(8):
-            if pane is None or pane.get_role_name() in ['application', 'frame']:
-                break
-            subtree = self._subtree(pane)
-            names = {n.get_name().strip() for n in subtree if self._visible(n) and n.get_name()}
-            title = any(name in names for name in binding['names'])
-            if sends[0] in subtree and title:
-                self._foreground(editors[0])
-                return editors[0], sends[0]
-            pane = pane.get_parent()
+        matches = []
+        for editor in editors:
+            pane = editor.get_parent()
+            for _ in range(8):
+                if pane is None or pane.get_role_name() in ['application', 'frame']:
+                    break
+                subtree = self._subtree(pane)
+                names = {n.get_name().strip() for n in subtree if self._visible(n) and n.get_name()}
+                title = any(name in names for name in binding['names'])
+                pane_editors = [n for n in editors if n in subtree]
+                pane_sends = [n for n in sends if n in subtree]
+                # Qt marks the search box MULTI_LINE too, and omits the disabled
+                # Send control while the composer is empty. A unique editor in
+                # the titled chat pane plus its composer toolbar is required.
+                toolbar = {'发送收藏', '发送文件'} <= names or {'Send Favorites', 'Send File'} <= names
+                if title and len(pane_editors) == 1 and (len(pane_sends) == 1 or (not require_send and not pane_sends and toolbar)):
+                    matches.append((editor, pane_sends[0] if pane_sends else None))
+                    break
+                if title and len(pane_editors) == 1 and not pane_sends and toolbar and require_send:
+                    self._foreground(editor)
+                    try:
+                        from visual_send import find_send
+                        matches.append((editor, find_send(self, editor, pane)))
+                    except Exception:
+                        raise DesktopError('SEND_VISUAL_UNVERIFIED: no unique visible Send button') from None
+                    break
+                pane = pane.get_parent()
+        if len(matches) == 1:
+            self._foreground(matches[0][0])
+            return matches[0]
         raise DesktopError('CHAT_IDENTITY_UNVERIFIED: the verified session needs its unique contact title in the visible chat pane')
 
     def _foreground(self, editor):
@@ -150,32 +167,37 @@ class Desktop:
 
     def ready(self, binding):
         editor, _ = self._controls(binding)
-        text = editor.get_text_iface()
-        if text.get_text(0, -1):
+        if self.a.Text.get_text(editor, 0, -1):
             raise DesktopError('EXISTING_DRAFT: preserve the user draft')
         return True
 
     def send(self, binding, text, before_click):
         editor, _ = self._controls(binding)
-        if editor.get_text_iface().get_text(0, -1):
+        if self.a.Text.get_text(editor, 0, -1):
             raise DesktopError('EXISTING_DRAFT')
-        if not editor.get_component_iface().grab_focus():
+        if not self.a.Component.grab_focus(editor):
             raise DesktopError('EDITOR_FOCUS_FAILED')
-        editor.get_editable_text_iface().set_text_contents(text)
-        editor2, send = self._controls(binding)
-        if editor2 != editor or editor.get_text_iface().get_text(0, -1) != text:
+        if not self.a.EditableText.set_text_contents(editor, text):
+            raise DesktopError('EDITOR_WRITE_FAILED')
+        editor2, send = self._controls(binding, require_send=True)
+        if editor2 != editor or self.a.Text.get_text(editor, 0, -1) != text:
             raise DesktopError('CHAT_OR_DRAFT_CHANGED')
         # Persist submitted before any action can reach WeChat. An interrupted
         # click is uncertain and must never be retried automatically.
         before_click()
+        from visual_send import VisualSend, click_send
+        if isinstance(send, VisualSend):
+            self._foreground(editor)
+            click_send(send)
+            return {'submitted': True}
         action = send.get_action_iface()
-        if action and action.get_n_actions() == 1:
-            if not action.do_action(0):
+        if action and self.a.Action.get_n_actions(send) == 1:
+            if not self.a.Action.do_action(send, 0):
                 raise DesktopError('SEND_ACTION_UNCERTAIN')
         else:
             from Xlib import X, display
             from Xlib.ext import xtest
-            box = send.get_component_iface().get_extents(self.a.CoordType.SCREEN)
+            box = self.a.Component.get_extents(send, self.a.CoordType.SCREEN)
             if box.width <= 0 or box.height <= 0:
                 raise DesktopError('SEND_BOUNDS_INVALID')
             d = display.Display()

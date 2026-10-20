@@ -279,3 +279,38 @@ class DesktopIdentityTests(unittest.TestCase):
         driver = self.driver([])
         driver._identity = lambda _: (_ for _ in ()).throw(desktop.DesktopError('wrong session'))
         with self.assertRaises(desktop.DesktopError): driver._controls(binding)
+
+    def test_qt_search_editor_and_disabled_send_are_not_ambiguous(self):
+        binding = {'account':'a','username':'target','names':['Unique Contact']}
+        d = self.driver([])
+        frame = d.nodes()[0]
+        chat = frame.children[0]
+        editor, send = chat.children[:2]
+        chat.children.remove(send)
+        for name in ['发送收藏', '发送文件']:
+            child = self.Node(name, 'button', ['show']); child.parent = chat
+            chat.children.append(child)
+        search = self.Node(role='text', states=['show','edit','multi'])
+        search.parent = frame; frame.children.append(search)
+        self.assertEqual(d._controls(binding), (editor, None))
+        with self.assertRaises(desktop.DesktopError):
+            d._controls(binding, require_send=True)
+        chat.children.append(send)
+        self.assertEqual(d._controls(binding, require_send=True), (editor, send))
+
+    def test_two_composers_in_the_titled_pane_fail_closed(self):
+        d = self.driver([])
+        chat = d.nodes()[1]
+        extra = self.Node(states=['show','edit','multi']); extra.parent = chat
+        chat.children.append(extra)
+        with self.assertRaises(desktop.DesktopError):
+            d._controls({'account':'a','username':'target','names':['Unique Contact']})
+
+    def test_text_interface_uses_gi_static_dispatch(self):
+        d = self.driver([])
+        d.a.Text = SimpleNamespace(get_text=lambda node, start, end: '')
+        binding = {'account':'a','username':'target','names':['Unique Contact']}
+        self.assertTrue(d.ready(binding))
+        d.a.Text.get_text = lambda node, start, end: 'existing draft'
+        with self.assertRaisesRegex(desktop.DesktopError, 'EXISTING_DRAFT'):
+            d.ready(binding)
