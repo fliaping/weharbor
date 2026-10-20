@@ -1,0 +1,9 @@
+- insert:
+    - id: weharbor-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: weharbor
+        transport: stdio
+        command: /opt/weharbor/python/bin/python
+        args: [/scripts/workspace/mcp_stdio.py]
+        cwd: /config

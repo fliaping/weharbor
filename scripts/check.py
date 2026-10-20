@@ -5,6 +5,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,9 +30,9 @@ def main():
                 ast.parse(path.read_text(), filename=str(path))
             elif path.suffix == '.sh' or path.read_bytes().startswith(b'#!/usr/bin/env bash') or path.read_bytes().startswith(b'#!/usr/bin/with-contenv bash'):
                 subprocess.run(['bash', '-n', str(path)], check=True)
-            elif path.suffix == '.js' and shutil.which('node'):
+            elif path.suffix in ['.js', '.mjs'] and shutil.which('node'):
                 subprocess.run(['node', '--check', str(path)], check=True)
-    subprocess.run(['python3', '-m', 'unittest', 'discover', '-s', 'tests', '-v'], cwd=ROOT, check=True)
+    subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-v'], cwd=ROOT, check=True)
     print('WeHarbor source validation passed')
 
 
