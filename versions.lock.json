@@ -11,10 +11,10 @@
     "sha256": "b7d0f8d53e9f648bc2c77a6096a04100d008f2d9f0d3988a2a4859b5992aca0a"
   },
   "analysis": {
-    "version": "28ef68958969cd1cd7b50f49a7f03e8737ca6ee5",
+    "version": "9ba2b71dc1b8018ab7feb59b028713beeb314f1b",
     "filename": "analysis.tar.gz",
-    "url": "https://codeload.github.com/fliaping/WeChatDataAnalysis/tar.gz/28ef68958969cd1cd7b50f49a7f03e8737ca6ee5",
-    "sha256": "60519777d448c97d4a5b89990e28de5ad8ca98dbc65b4b8b00d7e662723984ae"
+    "url": "https://codeload.github.com/fliaping/WeChatDataAnalysis/tar.gz/9ba2b71dc1b8018ab7feb59b028713beeb314f1b",
+    "sha256": "9a5465bca8fd7b3ced050e7daff6dce50949ae4dbcceb1b854cb0627010c5f99"
   },
   "node": {
     "version": "24.16.0",

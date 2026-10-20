@@ -14,6 +14,11 @@ verifies image AES/XOR keys against actual V2 images. Original encrypted files
 are never overwritten. Refresh runs every 30 seconds and can be triggered in
 the UI or through MCP. Decrypted copies and verified keys remain under
 `/config/.local/share/weharbor/analysis`, with private permissions.
+Linux chat auto-update uses snapshot revision events over SSE: after a validated
+sync, the page refreshes sessions and the selected conversation. Reconnecting
+also refreshes the page data. This is periodic synchronization (roughly 30 seconds
+plus decryption time), not a native WCDB connection; imported archives remain
+static. Unchanged sync attempts do not trigger repeated chat refreshes.
 
 If no usable key exists, the Linux source card offers an explicit wcdb-key-tool
 capture job. Start capture, then manually log out/in to WeChat within 120

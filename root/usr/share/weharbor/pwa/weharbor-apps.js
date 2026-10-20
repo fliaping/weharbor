@@ -51,6 +51,9 @@
       #weharbor-apps .app-settings{margin-top:14px;border-top:1px solid #38506b;padding-top:10px}
       #weharbor-apps label{display:flex;align-items:center;gap:7px;padding:4px 0}
       #weharbor-apps input{accent-color:#76c7ab}
+      #weharbor-apps .app-install{margin-top:12px}
+      #weharbor-apps #weharbor-install{min-height:36px;padding:6px 10px;font-size:12px;
+        background:transparent;color:#bccddd}
     `;
     document.head.appendChild(style);
     const launcher = document.createElement('button');
@@ -85,7 +88,8 @@
       <div class="app-settings"><label><input type="checkbox" data-setting="enabled">浏览器通知</label>
         <label><input type="checkbox" data-setting="wechat">微信通知</label>
         <label><input type="checkbox" data-setting="alpha">Alpha 通知</label></div>
-      <p class="app-feedback" role="status" aria-live="polite"></p>`;
+      <p class="app-feedback" role="status" aria-live="polite"></p>
+      <div class="app-install"><button type="button" id="weharbor-install" hidden>安装 WeHarbor</button></div>`;
     const feedback = panel.querySelector('.app-feedback');
     const frames = document.createElement('div');
     frames.id = 'weharbor-workspace-frames';
@@ -280,6 +284,7 @@
       }
     }
     document.body.append(frames, launcher, panel);
+    window.dispatchEvent(new CustomEvent('weharbor:apps-ready'));
     position();
     showView(read('weharbor-workspace-view', 'desktop'));
     addEventListener('resize', position);

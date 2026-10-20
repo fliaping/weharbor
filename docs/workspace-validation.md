@@ -1,11 +1,44 @@
-# Workspace validation — 2026-10-19
+# Workspace validation — 2026-10-20
 
 Validated on an amd64 Linux NAS with an existing WeHarbor profile. Test output
 contains counts and status only; keys, chat contents and account identities are
 not committed. The locally deployed image is
-`sha256:51fccda88e2e124d59ff1e88d1b7333354118a5cc3198b420020fccd1e2f2063`.
+`sha256:5e7b6ef5b43e12e135251d23f51076e6b81a540c507a43e2c59584f67ceb5d7c`.
 
-## Passed
+## October 20 update
+
+- Analysis fork pinned to `9ba2b71dc1b8018ab7feb59b028713beeb314f1b`.
+  Linux snapshots publish revisions only after validated database replacement;
+  SSE refreshes sessions and the selected chat, including after reconnect.
+  Linux reads report their decrypted source without attempting native WCDB.
+- Passed 59 targeted backend tests covering snapshot publication, failed
+  decryption preservation, source selection, startup, WAL recovery and key
+  modes, plus one frontend event-store test. The 78 integration/source checks
+  also passed.
+- Full final image build and fresh-profile smoke passed, including restart,
+  browser authentication, origin protection, twelve MCP tools, app switching
+  and unchanged original WeChat/Alpha packages.
+- Existing profile retained; deployed container is healthy. Production checks
+  through nginx confirmed automatic Linux snapshot updates are available, the
+  refresh interval is 30 seconds, native WCDB was not probed, and the SSE ready
+  event reports Linux snapshot mode. All 26 databases synchronized without
+  failures. Read 1,029 sessions and a bounded sample of two messages; an actual
+  V2 image decoded and returned HTTP 200 as a 7,157-byte JPEG.
+- Installation is a secondary button inside app management: 12px text, 36px
+  height, transparent background, no independent fixed positioning. Browser
+  checks with simulated install eligibility confirmed one prompt invocation,
+  hiding after consumption, and hiding with the menu. At 390 × 844 there was
+  no horizontal overflow. On ordinary NAS HTTP the button stays hidden because
+  the browser does not permit PWA installation there. No app was installed.
+
+Synthetic database publication and frontend event tests verify the update
+path. A newly received real message was not observed in an open chat during
+this check; the production checks establish synchronization and event-stream
+availability, rather than a native WCDB live connection.
+
+The previous image remains tagged locally as `weharbor:before-realtime-20261020`.
+
+## October 19 baseline
 
 - Source validation: 78 tests, including preparation/commit, scheduling,
   idempotency, crash recovery, uncertain receipts, chat identity, remote-reader
