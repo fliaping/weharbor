@@ -64,7 +64,7 @@ def package(source, destination):
     lock = json.loads((ROOT / 'versions.lock.json').read_text())
     assets = destination / 'downloads'
     assets.mkdir()
-    for name in ('wechat', 'alpha', 'node', 'tailscale', 'cloudflared'):
+    for name in ('wechat', 'alpha', 'node', 'tailscale', 'cloudflared', 'magpie'):
         component = lock[name]
         path = ROOT / 'downloads' / component['filename']
         with path.open('rb') as stream:

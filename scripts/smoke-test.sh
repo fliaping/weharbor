@@ -147,6 +147,21 @@ skills = harness_rpc('skills/list', {'args':{'request':{'sessionId':session['ses
 assert any(skill['name'] == 'weharbor-api' and skill['modelInvocable'] for skill in skills), skills
 assert any(skill['name'] == 'wechat-analysis-actions' and skill['modelInvocable'] for skill in skills), skills
 print('Official Harness discovers the WeHarbor action/automation Skill; no model request made')
+magpie_page = wait_for('magpie/', lambda r, b: r.status == 200 and b'<title>magpie</title>' in b)
+magpie_boot = wait_for('magpie/boot.js', lambda r, b: r.status == 200 and b'window.bootPrefs' in b)
+assert b'const prefix = "/magpie"' in magpie_boot
+magpie_state = json.loads(wait_for('magpie/api/state'))
+assert any(agent.get('id') == 'dsh' for agent in magpie_state.get('agents', [])), magpie_state.get('agents')
+assert magpie_state.get('settings', {}).get('redact') is True
+assert magpie_state.get('settings', {}).get('redactPersonal') is True
+mask_req = urllib.request.Request(url + 'magpie/api/masking/preview',
+    data=json.dumps({'text': '手机号 13800138000 密码 s3cr3tPass123!'}).encode(),
+    headers={**headers, 'Content-Type': 'application/json', 'Origin': os.environ['SMOKE_URL']})
+with browser.open(mask_req, timeout=15) as response:
+    preview = json.load(response)
+    assert preview['off'] is False and len(preview['hits']) >= 2, preview
+    assert '13800138000' not in preview['text'] and '{{PHONE_' in preview['text'], preview
+print('Magpie web UI, local desensitization and DeepSeek Harness agent discovery passed')
 payload = {'type':'client-request', 'rpcId':'weharbor-plugins',
            'method':'pluginInventory/list', 'payload':{'args':{}}}
 request = urllib.request.Request(url + 'assistant/api/pluginInventory/list',
@@ -327,6 +342,13 @@ version = subprocess.check_output(['dpkg-query', '-W', '-f=${Version}', 'wechat'
 assert version == lock['wechat']['version'], version
 alpha = subprocess.check_output(['dpkg-query', '-W', '-f=${Version}', 'alpha'], text=True)
 assert alpha == lock['alpha']['version'], alpha
+magpie_ver = subprocess.check_output(['magpie', 'version'], text=True).strip()
+assert magpie_ver == 'magpie ' + lock['magpie']['version'], magpie_ver
+subprocess.run(['magpie', 'healthcheck'], check=True)
+with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:3425/v1/models',
+        headers={'Authorization': 'Bearer magpie'}), timeout=5) as response:
+    assert json.load(response)['object'] == 'list'
+assert 'http://127.0.0.1:3425/v1' in Path('/config/.local/share/weharbor/harness/profiles/web/cordis.patch.yml').read_text()
 subprocess.run(['dpkg', '--verify', 'alpha'], check=True)
 assert Path('/config/Documents/xwechat_files').is_symlink()
 subprocess.run(['pgrep', '-f', '^python3 /scripts/weharbor/window-layout.py$'],

@@ -17,6 +17,7 @@ Additional workspace components:
 | WeChatDataAnalysis Linux fork | https://github.com/fliaping/WeChatDataAnalysis (upstream LifeArchiveProject/WeChatDataAnalysis) | Upstream has no repository-wide LICENSE file at the pinned revision. Retain its existing notices; WeHarbor MIT does not relicense it. Source and web UI are included at /opt/weharbor/analysis. |
 | wcdb-key-tool | https://github.com/TANGandXUE/wcdb-key-tool | MIT; unchanged capture tool, LICENSE and attribution included in the analysis fork. |
 | DeepSeek Harness | https://github.com/deepseek-ai/deepseek-harness | MIT; official npm distributions and dependencies retain their package licenses under /opt/weharbor/harness/node_modules. |
+| Magpie | https://github.com/yetone/magpie | MIT; pinned official Linux CLI/web gateway binary at /opt/weharbor/magpie/magpie. |
 | Tailscale | https://github.com/tailscale/tailscale | BSD-3-Clause; official archive retains its LICENSE under /opt/weharbor/network. |
 | cloudflared | https://github.com/cloudflare/cloudflared | Apache-2.0; pinned official binary. |
 | Node.js | https://nodejs.org/ | MIT and bundled third-party notices; official distribution retains LICENSE under /opt/weharbor/node. |

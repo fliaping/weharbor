@@ -9,16 +9,17 @@ RUN find /integration -type d -exec chmod 0755 {} + \
     && find /integration -type f -exec chmod 0644 {} +
 
 FROM ${BASE_IMAGE} AS workspace-runtime
-COPY downloads/node.tar.xz downloads/analysis.tar.gz downloads/tailscale.tgz downloads/cloudflared /tmp/assets/
+COPY downloads/node.tar.xz downloads/analysis.tar.gz downloads/tailscale.tgz downloads/cloudflared downloads/magpie /tmp/assets/
 COPY versions.lock.json /tmp/versions.lock.json
-RUN python3 -c "import hashlib,json,pathlib; lock=json.load(open('/tmp/versions.lock.json')); [(lambda p,c: (None if hashlib.sha256(p.read_bytes()).hexdigest()==c['sha256'] else (_ for _ in ()).throw(ValueError(str(p)))))(pathlib.Path('/tmp/assets')/lock[n]['filename'],lock[n]) for n in ['node','analysis','tailscale','cloudflared']]" \
-    && mkdir -p /opt/weharbor/node /opt/weharbor/analysis /opt/weharbor/network \
+RUN python3 -c "import hashlib,json,pathlib; lock=json.load(open('/tmp/versions.lock.json')); [(lambda p,c: (None if hashlib.sha256(p.read_bytes()).hexdigest()==c['sha256'] else (_ for _ in ()).throw(ValueError(str(p)))))(pathlib.Path('/tmp/assets')/lock[n]['filename'],lock[n]) for n in ['node','analysis','tailscale','cloudflared','magpie']]" \
+    && mkdir -p /opt/weharbor/node /opt/weharbor/analysis /opt/weharbor/network /opt/weharbor/magpie \
     && python3 -c "import lzma,shutil; shutil.copyfileobj(lzma.open('/tmp/assets/node.tar.xz'),open('/tmp/node.tar','wb'))" \
     && tar -xf /tmp/node.tar --strip-components=1 -C /opt/weharbor/node \
     && tar -xzf /tmp/assets/analysis.tar.gz --strip-components=1 -C /opt/weharbor/analysis \
     && tar -xzf /tmp/assets/tailscale.tgz --strip-components=1 -C /opt/weharbor/network \
     && cp /tmp/assets/cloudflared /opt/weharbor/network/cloudflared \
-    && chmod 0755 /opt/weharbor/network/cloudflared
+    && cp /tmp/assets/magpie /opt/weharbor/magpie/magpie \
+    && chmod 0755 /opt/weharbor/network/cloudflared /opt/weharbor/magpie/magpie
 ENV PATH="/opt/weharbor/node/bin:${PATH}"
 WORKDIR /opt/weharbor/analysis/frontend
 RUN npm ci --no-audit --no-fund \
@@ -97,6 +98,7 @@ RUN test -f /defaults/default.conf \
     && python3 /scripts/weharbor/install-web.py \
     && sed -i '/<dock>/,/<\/dock>/s/<noStrut>no<\/noStrut>/<noStrut>yes<\/noStrut>/' /etc/xdg/openbox/rc.xml \
     && ln -sfn /scripts/weharbor/wechat-launch.py /usr/bin/wechat \
+    && ln -sfn /opt/weharbor/magpie/magpie /usr/local/bin/magpie \
     && chmod 0755 \
         /etc/s6-overlay/s6-rc.d/svc-app-switcher/run \
         /etc/s6-overlay/s6-rc.d/init-weharbor-profile/run \
@@ -105,6 +107,7 @@ RUN test -f /defaults/default.conf \
         /scripts/alpha/*.sh /scripts/wechat/*.sh /scripts/weharbor/* \
         /scripts/workspace/*.sh /etc/s6-overlay/s6-rc.d/svc-analysis/run \
         /etc/s6-overlay/s6-rc.d/svc-workspace/run /etc/s6-overlay/s6-rc.d/svc-harness/run \
+        /etc/s6-overlay/s6-rc.d/svc-magpie/run \
         /usr/local/bin/stalonetray /usr/local/bin/weharbor-health /usr/local/bin/weharbor-capture-key \
     && chmod 0440 /etc/sudoers.d/weharbor-capture \
     && visudo -cf /etc/sudoers.d/weharbor-capture
@@ -120,6 +123,7 @@ ENV TITLE="WeHarbor｜微港" \
     ENABLE_APP_SWITCHER="true" \
     APP_SWITCHER_MODE="web" \
     ENABLE_WINDOW_DEFAULTS="true" \
-    ENABLE_BROWSER_NOTIFICATIONS="true"
+    ENABLE_BROWSER_NOTIFICATIONS="true" \
+    ENABLE_MAGPIE="true"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
     CMD /usr/local/bin/weharbor-health

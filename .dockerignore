@@ -16,6 +16,7 @@ downloads/*
 !downloads/node.tar.xz
 !downloads/tailscale.tgz
 !downloads/cloudflared
+!downloads/magpie
 !runtime/
 !runtime/harness/
 !runtime/harness/package.json

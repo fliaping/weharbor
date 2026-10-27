@@ -1,8 +1,8 @@
 # Integrated workspace
 
 The edge handle switches fullscreen views without disconnecting the Selkies
-desktop: Desktop, WeChatDataAnalysis (`/analysis/`), DeepSeek Harness
-(`/assistant/`), and Connections (`/workspace/`). Each iframe remains loaded
+desktop: Desktop, WeChatDataAnalysis (`/analysis/`), Magpie Gateway (`/magpie/`),
+DeepSeek Harness (`/assistant/`), and Connections (`/workspace/`). Each iframe remains loaded
 when switching away. Existing browser authentication covers these pages.
 
 ## Local Linux data
@@ -70,8 +70,16 @@ analysis edits. The assistant workspace registers `weharbor-api` and
 both workflows without resource support in the MCP client. The analysis Skill
 is also available as the MCP resource `wechat-analysis://skill`.
 Both clients read their own local token files; tokens stay outside the patch.
-Configure your model credentials in Harness's own setup UI;
-WeHarbor does not copy Alpha/WeFlow credentials into Harness. Its state is
+Magpie (`yetone/magpie`) runs in web mode behind `/magpie/` (loopback proxy on
+`127.0.0.1:3430` -> `127.0.0.1:3431`) with its OpenAI/Anthropic-compatible
+model gateway on `127.0.0.1:3425`. Local reversible desensitization (`redact`
+for keys/passwords and `redactPersonal` for phone numbers, ID cards, bank cards,
+and emails) is enabled by default in `/config/.config/magpie/settings.json`.
+DeepSeek Harness (`dsh`) is pre-wired to Magpie's model gateway via
+`/config/.local/share/weharbor/harness/profiles/web/cordis.patch.yml` and
+`MAGPIE_GATEWAY_KEY`; add upstream model providers and select `dsh`'s active
+model in the Magpie `/magpie/` web UI (or in Harness's own setup UI). WeHarbor
+does not copy Alpha/WeFlow credentials into Harness. Its state is
 `/config/.local/share/weharbor/harness`.
 The loopback proxy exchanges DSH's process-scoped launch token on the server
 and scopes its signed HttpOnly cookie to `/assistant/`. The token is redacted

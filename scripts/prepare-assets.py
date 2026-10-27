@@ -53,7 +53,7 @@ def main():
     args = parser.parse_args()
     lock = json.loads((ROOT / 'versions.lock.json').read_text())
     # Both default URLs point to the pinned, unmodified Release assets.
-    for component in ['alpha', 'wechat', 'analysis', 'node', 'tailscale', 'cloudflared']:
+    for component in ['alpha', 'wechat', 'analysis', 'node', 'tailscale', 'cloudflared', 'magpie']:
         prepare(component, lock[component], ROOT / 'downloads', args.check_only)
 
 

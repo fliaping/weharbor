@@ -37,6 +37,8 @@ def main():
                 raise ValueError(f'Alpha backend is not running: {name}')
     if enabled('AUTO_START_WECHAT'):
         subprocess.run(['pgrep', '-x', 'wechat'], check=True, stdout=subprocess.DEVNULL)
+    if enabled('ENABLE_MAGPIE'):
+        subprocess.run(['pgrep', '-x', 'magpie'], check=True, stdout=subprocess.DEVNULL)
     if enabled('ENABLE_APP_SWITCHER') and os.environ.get('APP_SWITCHER_MODE', 'web') == 'desktop':
         subprocess.run(['pgrep', '-f', '/scripts/app-switcher/app-switcher.py'],
                        check=True, stdout=subprocess.DEVNULL)

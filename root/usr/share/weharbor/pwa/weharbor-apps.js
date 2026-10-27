@@ -73,6 +73,7 @@
       <nav class="workspace-views" aria-label="工作区切换">
         <button type="button" data-view="desktop" aria-pressed="true">微信桌面<span>Selkies</span></button>
         <button type="button" data-view="analysis" aria-pressed="false">数据分析<span>聊天与媒体</span></button>
+        <button type="button" data-view="magpie" aria-pressed="false">Magpie 网关<span>模型与本地脱敏</span></button>
         <button type="button" data-view="assistant" aria-pressed="false">DeepSeek 助手<span>AI 对话</span></button>
         <button type="button" data-view="connections" aria-pressed="false">连接与操作记录<span>网络 · MCP</span></button>
       </nav>
@@ -94,7 +95,7 @@
     const frames = document.createElement('div');
     frames.id = 'weharbor-workspace-frames';
     frames.hidden = true;
-    const views = {analysis: ['/analysis/', '微信数据分析'], assistant: ['/assistant/', 'DeepSeek 助手'],
+    const views = {analysis: ['/analysis/', '微信数据分析'], magpie: ['/magpie/', 'Magpie 网关'], assistant: ['/assistant/', 'DeepSeek 助手'],
       connections: ['/workspace/', '连接与操作记录']};
     const showView = (view) => {
       if (view !== 'desktop' && !views[view]) return;

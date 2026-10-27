@@ -12,10 +12,12 @@ Selkies 2.0 基础镜像（Debian trixie），把官方 Linux 微信和 Alpha �
 [安装为桌面应用](docs/pwa.md) ·
 [组件许可](THIRD_PARTY_NOTICES.md)
 
-集成工作区开发版：边缘挂件可全屏切换桌面、Linux 聊天分析、DeepSeek
+集成工作区开发版：边缘挂件可全屏切换桌面、Linux 聊天分析、Magpie 模型网关、DeepSeek
 Harness 和连接设置。支持已有 WeFlow 密钥、数据库/WAL 与图片解密、
-独立 MCP/Skill，以及带回执的桌面 Action。Harness 同时加载微信工具和分析工作台工具，
-可读取数据、按授权发送消息、管理自动化任务及连续刷新保存朋友圈。
+独立 MCP/Skill，以及带回执的桌面 Action。内置 Magpie 网页模式与本地可逆脱敏网关
+（默认开启密钥与个人敏感信息脱敏），DeepSeek Harness（dsh 助手）默认接入 Magpie
+提供的模型服务，同时加载微信工具和分析工作台工具，可读取数据、按授权发送消息、
+管理自动化任务及连续刷新保存朋友圈。
 分析工作台开放全部功能入口，并分别标明已实现、待连接与尚未实现。配置和限制见
 [工作区说明](docs/workspace.md)。
 
@@ -121,6 +123,7 @@ npx --yes skills add https://github.com/fliaping/weharbor --skill alpha-api --ye
 | APP_SWITCHER_MODE | web | 网页贴边应用条；desktop 恢复旧桌面切换器 |
 | ENABLE_WINDOW_DEFAULTS | true | 初始窗口布局 |
 | ENABLE_BROWSER_NOTIFICATIONS | true | 浏览器通知 |
+| ENABLE_MAGPIE | true | 启动 Magpie 网页管理端与本地脱敏模型网关 |
 
 GPU 加速可选：宿主机存在 /dev/dri 时运行
 docker compose -f compose.yaml -f compose.gpu.yaml up -d。

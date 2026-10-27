@@ -49,5 +49,12 @@
     "original_filename": "Alpha-0.2.0-x64.deb",
     "url": "https://github.com/xunchahaha/alpha-releases/releases/download/v0.2.0/Alpha-0.2.0-x64.deb",
     "sha256": "9d79a56b88981c496818d93600698d11f8e21d759381c66c3fec3a10b38980d6"
+  },
+  "magpie": {
+    "version": "0.1.1734",
+    "filename": "magpie",
+    "original_filename": "magpie-cli-linux-amd64",
+    "url": "https://github.com/yetone/magpie/releases/download/v0.1.1734/magpie-cli-linux-amd64",
+    "sha256": "5eb34a60108bf19f8d7c1a31e31361a2708924c78daec13121c4ab51fec5c85a"
   }
 }

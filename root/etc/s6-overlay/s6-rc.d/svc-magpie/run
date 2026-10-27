@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+if [ "${ENABLE_MAGPIE:-true}" != "true" ]; then
+    exec sleep infinity
+fi
+exec s6-setuidgid abc /scripts/workspace/magpie-run.sh
