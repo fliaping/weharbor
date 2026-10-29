@@ -40,7 +40,7 @@ xunchahaha/alpha-releases 的 v0.2.0 Release 下载；构建时都会校验锁�
 
 - 在浏览器里使用官方 Linux 微信与 Alpha（Selkies 2.0，WebSocket 传输，支持剪贴板）。
 - 网页贴边应用条，鼠标靠近展开为小圆球，可拖动、切换微信和 Alpha、选择窗口、重启应用及管理通知；
-  Ctrl+Alt+Shift+1–5 / ` / Space 快捷切换视图（见 [运维说明](docs/operations.md#网页应用管理)）。
+  Alt+1–5 切换视图、Alt+` 轮换、Alt+0 打开面板（macOS 用 Option）（见 [运维说明](docs/operations.md#网页应用管理)）。
 - Alpha 默认最小化，微信默认获得焦点；登录后只自动最大化微信主窗口一次。
 - 将聊天推送与桌面通知转发为浏览器原生通知。
 - 支持 PWA 安装，以独立窗口从电脑桌面或手机主屏幕打开。

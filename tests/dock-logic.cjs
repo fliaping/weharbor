@@ -17,22 +17,34 @@ vm.runInNewContext(fs.readFileSync(process.argv[2], "utf8"), context);
 const dock = context.WeHarborDock;
 const {matchShortcut, nextView, distanceToRect, shortcutLabel, VIEW_ORDER, NEAR_PX, COLLAPSE_DELAY_MS} = dock.logic;
 
-const key = (code, mods = {}) => ({code, ctrlKey: true, altKey: true, shiftKey: true, metaKey: false, ...mods});
+const key = (code, mods = {}) => ({code, ctrlKey: false, altKey: true, shiftKey: false, metaKey: false, ...mods});
 assert.deepEqual({...matchShortcut(key("Digit1"))}, {type: "view", view: "desktop"});
 assert.deepEqual({...matchShortcut(key("Digit3"))}, {type: "view", view: "magpie"});
-assert.deepEqual({...matchShortcut(key("Numpad4"))}, {type: "view", view: "assistant"});
+assert.deepEqual({...matchShortcut(key("Digit5"))}, {type: "view", view: "connections"});
+assert.equal(matchShortcut(key("Digit6")), null);
 assert.equal(matchShortcut(key("Digit9")), null);
 assert.equal(matchShortcut(key("Backquote")).type, "cycle");
+assert.equal(matchShortcut(key("Digit0")).type, "panel");
 assert.equal(matchShortcut(key("Space")).type, "panel");
-// Plain or partial modifier combos (browser, WeChat, Selkies Ctrl+Shift hotkeys) are untouched.
+// macOS Option+digit types "¡™£" etc.: matching uses the physical code, not event.key.
+assert.deepEqual({...matchShortcut({...key("Digit2"), key: "™"})}, {type: "view", view: "analysis"});
+// Only Alt alone: Ctrl+Alt (AltGr on Windows layouts), Shift, Meta and plain keys pass through,
+// as do numpad digits (Windows Alt+numpad character entry) and IME composition.
 assert.equal(matchShortcut(key("Digit1", {altKey: false})), null);
-assert.equal(matchShortcut(key("KeyM", {altKey: false})), null);
+assert.equal(matchShortcut(key("Digit1", {ctrlKey: true})), null);
+assert.equal(matchShortcut(key("Digit1", {shiftKey: true})), null);
 assert.equal(matchShortcut(key("Digit1", {metaKey: true})), null);
+assert.equal(matchShortcut(key("Numpad1")), null);
+assert.equal(matchShortcut(key("KeyS")), null, "WeChat's Alt+S send and Alt+A screenshot are untouched");
+assert.equal(matchShortcut(key("KeyA")), null);
+assert.equal(matchShortcut(key("Tab")), null);
+assert.equal(matchShortcut(key("F4")), null);
+assert.equal(matchShortcut(key("Digit1", {isComposing: true})), null);
 assert.equal(matchShortcut({code: "Digit1"}), null);
 assert.equal(nextView("desktop"), "analysis");
 assert.equal(nextView(VIEW_ORDER.at(-1)), "desktop");
 assert.equal(nextView("desktop", -1), VIEW_ORDER.at(-1));
-assert.equal(shortcutLabel("assistant"), "Ctrl+Alt+Shift+4");
+assert.equal(shortcutLabel("assistant"), "Alt+4");
 const handle = {left: 990, right: 1000, top: 300, bottom: 352};
 assert.equal(distanceToRect(995, 320, handle), 0);
 assert.equal(distanceToRect(950, 320, handle), 40);
@@ -58,7 +70,7 @@ e = event("Digit2"); keydown.fn(e);
 assert.equal(e.prevented, 1); assert.equal(e.stopped, 1);
 assert.equal(actions.at(-1).view, "analysis");
 const up = event("Digit2"); keyup.fn(up); assert.equal(up.stopped, 1, "matching keyup is swallowed too");
-const other = event("KeyA", {ctrlKey: false, altKey: false, shiftKey: false}); keydown.fn(other); keyup.fn(other);
+const other = event("KeyA", {altKey: false}); keydown.fn(other); keyup.fn(other);
 assert.equal(other.prevented + other.stopped, 0, "ordinary keys reach the remote desktop");
 e = event("Digit2", {repeat: true}); keydown.fn(e); assert.equal(actions.length, 1, "auto-repeat doesn't re-trigger");
 // Disabling shortcuts in dock settings lets the keys through.
@@ -85,3 +97,14 @@ console.log("dock logic ok");
   assert.equal(ctx.WeHarborDock, undefined);
 }
 console.log("dock credential reload ok");
+
+// macOS labels the same physical shortcuts with the Option key.
+{
+  const ctx = {window: {addEventListener: () => {}}, navigator: {platform: "MacIntel"},
+    document: {readyState: "loading", addEventListener: () => {}}, localStorage: {getItem: () => null, setItem: () => {}}};
+  ctx.globalThis = ctx;
+  vm.runInNewContext(fs.readFileSync(process.argv[2], "utf8"), ctx);
+  assert.equal(ctx.WeHarborDock.logic.shortcutLabel("magpie"), "⌥3");
+  assert.equal(ctx.WeHarborDock.logic.matchShortcut({code: "Digit3", key: "£", altKey: true}).view, "magpie");
+}
+console.log("dock mac labels ok");

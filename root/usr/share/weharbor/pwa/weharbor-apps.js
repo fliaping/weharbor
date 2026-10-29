@@ -18,16 +18,21 @@
   const VIEW_ICONS = {desktop: '💬', analysis: '📊', magpie: '🛡️', assistant: '🤖', connections: '🔗'};
   const NEAR_PX = 56, COLLAPSE_DELAY_MS = 400;
   const isMac = /Mac|iPhone|iPad/.test(globalThis.navigator?.platform || globalThis.navigator?.userAgent || '');
-  const SHORTCUT_PREFIX = isMac ? '⌃⌥⇧' : 'Ctrl+Alt+Shift+';
-  // Ctrl+Alt+Shift (+Digit / Backquote / Space): unused by browsers, WeChat and Selkies' own
-  // Ctrl+Shift hotkeys. Matched by physical key code so keyboard layouts don't matter.
+  const SHORTCUT_PREFIX = isMac ? '⌥' : 'Alt+';
+  // Two-key shortcuts: Alt (Option on macOS) + Digit1-5 / Digit0 / Backquote / Space.
+  // Matched by physical key code (event.code) because Option+digit types "¡™£…" on macOS and
+  // layouts differ. Only Alt counts: Ctrl+Alt (= AltGr on Windows layouts), Shift and Meta
+  // combos pass through, and so do numpad digits (Windows Alt+numpad character codes).
+  // Chrome's Linux Alt+1-8 tab jump is not a reserved accelerator, so preventDefault wins;
+  // Alt+0 is the panel key because desktop environments may grab Alt+Space (window menu)
+  // and GNOME grabs Alt+` before the page sees it. Alt+Space stays as an alias.
+  const SHORTCUT_KEYS = {Digit0: {type: 'panel'}, Space: {type: 'panel'}, Backquote: {type: 'cycle'}};
   const matchShortcut = (event) => {
-    if (!event || !event.ctrlKey || !event.altKey || !event.shiftKey || event.metaKey) return null;
-    const digit = /^(?:Digit|Numpad)([1-9])$/.exec(event.code || '');
+    if (!event || !event.altKey || event.ctrlKey || event.shiftKey || event.metaKey || event.isComposing) return null;
+    const code = event.code || '';
+    const digit = /^Digit([1-9])$/.exec(code);
     if (digit) { const view = VIEW_ORDER[Number(digit[1]) - 1]; return view ? {type: 'view', view} : null; }
-    if (event.code === 'Backquote') return {type: 'cycle'};
-    if (event.code === 'Space') return {type: 'panel'};
-    return null;
+    return SHORTCUT_KEYS[code] ? {...SHORTCUT_KEYS[code]} : null;
   };
   const nextView = (current, step = 1) => {
     const index = VIEW_ORDER.indexOf(current);
@@ -137,7 +142,7 @@
     launcher.innerHTML = '<span class="dock-icon" aria-hidden="true"></span>';
     const launcherIcon = launcher.firstChild;
     const updateLauncherTitle = () => {
-      const keys = readShortcutsEnabled() ? '（' + SHORTCUT_PREFIX + 'Space）' : '';
+      const keys = readShortcutsEnabled() ? '（' + SHORTCUT_PREFIX + '0）' : '';
       launcher.title = '应用管理' + keys + ' · 拖动可调整位置';
       launcher.setAttribute('aria-label', '打开应用管理' + keys + '，拖动可调整位置');
     };
@@ -185,7 +190,7 @@
       }
       shortcutHelp.innerHTML = enabled
         ? '快捷键：<kbd>' + SHORTCUT_PREFIX + '1–' + VIEW_ORDER.length + '</kbd> 切换视图，<kbd>' + SHORTCUT_PREFIX +
-          '`</kbd> 轮换，<kbd>' + SHORTCUT_PREFIX + 'Space</kbd> 打开/收起本面板'
+          '`</kbd> 轮换，<kbd>' + SHORTCUT_PREFIX + '0</kbd> 或 <kbd>' + SHORTCUT_PREFIX + 'Space</kbd> 打开/收起本面板'
         : '切换快捷键已关闭。';
       updateLauncherTitle();
     };
