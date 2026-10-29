@@ -32,6 +32,11 @@ assert.equal(syncPatchText(replaced, []), seeded, 'empty upstream returns to mod
 const owned = seeded.replace('models: []', 'models:\n          - id: "picked-by-magpie"');
 assert.equal(syncPatchText(owned, ['other']), owned);
 assert.equal(syncPatchText('[]\n', ['x']), '[]\n', 'no magpie block, no change');
+// Magpie's own dsh route rewrite keeps our mark but adds names; same ids means hands off,
+// otherwise the two writers ping-pong and dsh reloads every few seconds.
+const magpieWritten = seeded.replace('models: []', `models: ${SYNC_MARK}\n          - id: mocktest/mock-alpha\n            name: mock-alpha · mocktest\n          - id: mocktest/mock-beta\n            name: mock-beta · mocktest`);
+assert.equal(syncPatchText(magpieWritten, ['mocktest/mock-beta', 'mocktest/mock-alpha']), magpieWritten);
+assert.ok(syncPatchText(magpieWritten, ['mocktest/mock-alpha']).includes('- id: "mocktest/mock-alpha"\n- id: ui-settings-general'));
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'magpie-sync-'));
 const patchPath = path.join(dir, 'cordis.patch.yml');

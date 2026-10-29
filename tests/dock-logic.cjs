@@ -65,12 +65,23 @@ e = event("Digit2", {repeat: true}); keydown.fn(e); assert.equal(actions.length,
 store["weharbor-dock-shortcuts"] = "false";
 e = event("Digit3"); keydown.fn(e); assert.equal(e.prevented, 0); assert.equal(actions.length, 1);
 
-// Opened as https://user:pass@host/: reload the same URL without credentials, mount nothing.
-const replaced = [];
-const credContext = {URL, location: {href: "https://weharbor:secret@nas.example:3001/?x=1#v", replace: (u) => replaced.push(u)},
-  window: win, document: context.document};
-credContext.globalThis = credContext;
-vm.runInNewContext(fs.readFileSync(process.argv[2], "utf8"), credContext);
-assert.deepEqual(replaced, ["https://nas.example:3001/?x=1#v"]);
-assert.equal(credContext.WeHarborDock, undefined);
 console.log("dock logic ok");
+
+// Chrome hides user:pass@ from location.href but keeps it in document.URL, which relative
+// fetches and iframe src resolve against: the dock reloads clean before mounting anything.
+{
+  const replaced = [];
+  const ctx = {
+    window: {addEventListener: () => { throw new Error("must not hook before the clean reload"); }},
+    navigator: {platform: "Linux x86_64"},
+    document: {URL: "https://u:p%40ss@127.0.0.1:3301/?x=1#h", readyState: "loading", addEventListener: () => {}},
+    location: {href: "https://127.0.0.1:3301/?x=1#h", replace: (url) => replaced.push(url)},
+    localStorage: {getItem: () => null, setItem: () => {}},
+    URL,
+  };
+  ctx.globalThis = ctx;
+  vm.runInNewContext(fs.readFileSync(process.argv[2], "utf8"), ctx);
+  assert.deepEqual(replaced, ["https://127.0.0.1:3301/?x=1#h"]);
+  assert.equal(ctx.WeHarborDock, undefined);
+}
+console.log("dock credential reload ok");

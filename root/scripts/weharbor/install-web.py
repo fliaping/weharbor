@@ -7,6 +7,9 @@ import shutil
 from pathlib import Path
 
 TITLE = 'WeHarbor｜微港'
+# Runs before any dashboard script: Chrome keeps user:pass@ from the address bar in
+# document.URL (not location.href) and every relative fetch() then throws.
+STRIP_CREDENTIALS = ('<script data-weharbor="strip-credentials">' + '(()=>{try{const u=new URL(document.URL);if(u.username||u.password){u.username="";u.password="";location.replace(u.href)}}catch{}})()' + '</script>')
 
 
 def install(selkies, assets, nginx):
@@ -32,6 +35,7 @@ def install(selkies, assets, nginx):
         html = re.sub(r'<link\b[^>]*rel=["\'](?:manifest|apple-touch-icon)["\'][^>]*>', '', html, flags=re.I)
         html = re.sub(r'<meta\b[^>]*name=["\'](?:theme-color|apple-mobile-web-app-title)["\'][^>]*>', '', html, flags=re.I)
         html = re.sub(r'<script\b[^>]*src=["\'][^"\']*weharbor-pwa\.js[^"\']*["\'][^>]*>\s*</script>', '', html, flags=re.I)
+        html = re.sub(r'<script data-weharbor="strip-credentials">.*?</script>', '', html, flags=re.S)
         html = re.sub(r'<script\b[^>]*src=["\'][^"\']*weharbor-apps\.js[^"\']*["\'][^>]*>\s*</script>', '', html, flags=re.I)
         tags = (f'<title>{TITLE}</title>'
                 '<link rel="manifest" href="./weharbor.webmanifest" crossorigin="use-credentials">'
@@ -45,6 +49,7 @@ def install(selkies, assets, nginx):
             html = re.sub(r'</head\s*>', lambda _: tags + '</head>', html, count=1, flags=re.I)
         else:
             html = re.sub(r'(<html\b[^>]*>)', lambda m: m[1] + '<head><meta charset="utf-8">' + tags + '</head>', html, count=1, flags=re.I)
+        html = re.sub(r'<head\b[^>]*>', lambda m: m[0] + STRIP_CREDENTIALS, html, count=1, flags=re.I)
         index.write_text(html)
         # Selkies updates document.title after fetching its generated manifest.
         for directory in ['assets', 'src']:

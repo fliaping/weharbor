@@ -1,9 +1,12 @@
 (() => {
   'use strict';
   // https://user:pass@host/ breaks every relative fetch() ("Request cannot be constructed
-  // from a URL that includes credentials"). The browser keeps the Basic auth, so reload clean.
+  // from a URL that includes credentials"). Chrome hides the userinfo from location.href but
+  // keeps it in document.URL / document.baseURI, which relative URLs (and iframe src) resolve
+  // against, so test document.URL. The browser keeps the Basic auth, so reload clean before
+  // any iframe exists.
   try {
-    const here = new URL(location.href);
+    const here = new URL(document.URL);
     if (here.username || here.password) {
       here.username = ''; here.password = '';
       location.replace(here.href);

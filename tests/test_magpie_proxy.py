@@ -143,6 +143,8 @@ class MagpieProxyTests(unittest.TestCase):
         head = self.html[:self.html.index('<title>')]
         self.assertIn('u.username||u.password', head)
         self.assertIn('location.replace(u.href)', head)
+        # location.href hides the userinfo in Chrome; document.URL keeps it.
+        self.assertIn('new URL(document.URL)', head)
 
     def test_dsh_model_list_syncs_from_gateway_models(self):
         subprocess.run(['node', str(ROOT / 'tests/magpie-model-sync.mjs'),

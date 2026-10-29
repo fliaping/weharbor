@@ -82,16 +82,30 @@ model in the Magpie `/magpie/` web UI (or in Harness's own setup UI). The
 preset `magpie` route's `models:` list is synced every 15 s from the gateway's
 `GET /v1/models` (marked `# weharbor: synced from magpie /v1/models`), so models
 appear in Harness once a Magpie upstream provider is added; a list without that
-marker is left untouched, and `MAGPIE_MODEL_SYNC=off` disables the sync. `dsh`
+marker is left untouched, as is a list that already carries the same model ids
+(Magpie's own Agent route rewrites it with display names; rewriting it back would
+make the two writers fight and reload Harness), and `MAGPIE_MODEL_SYNC=off`
+disables the sync. `dsh`
 is installed as `/usr/local/bin/dsh` so terminals and Magpie's agent detection
 find it on the normal PATH. The Harness UI language is seeded once to Chinese
-(`locale.preference: zh`); changing it in Settings is kept afterwards. WeHarbor
+(`locale.preference: zh` on the profile's `locale` row, which is where Harness's
+Settings → Language stores the choice; the browser only falls back to its own
+language while that setting cannot be loaded); changing it in Settings is kept
+afterwards. WeHarbor
 does not copy Alpha/WeFlow credentials into Harness. Its state is
 `/config/.local/share/weharbor/harness`.
 The loopback proxy exchanges DSH's process-scoped launch token on the server
 and scopes its signed HttpOnly cookie to `/assistant/`. The token is redacted
 from logs. Original browser origins are checked before forwarding HTTP and
 WebSocket traffic; the external browser authentication remains required.
+Opening WeHarbor as `https://user:pass@host/` is supported: Chrome hides the
+userinfo from `location.href` but keeps it in `document.URL`/`document.baseURI`,
+so every relative `fetch()` (and every iframe `src`) would fail with "Request
+cannot be constructed from a URL that includes credentials". The desktop page,
+`/magpie/`, `/assistant/`, `/analysis/` (nginx `sub_filter`) and `/workspace/`
+therefore start with a tiny script that checks `document.URL` and
+`location.replace()`s the same URL without the userinfo; the browser keeps the
+Basic auth for the reload.
 
 Read, search, summarize and suggest replies use message MCP tools. Sending is a
 separate prepare/commit action with an exact username, idempotency key, context

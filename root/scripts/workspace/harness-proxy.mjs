@@ -138,8 +138,9 @@ function browserCompatibility(value, headers) {
   // Local NAS HTTP is not a secure context: randomUUID is absent even though
   // getRandomValues is available. Keep the official bundle unchanged.
   const script = '<script>if(globalThis.crypto&&!crypto.randomUUID){crypto.randomUUID=()=>{const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const h=Array.from(b,x=>x.toString(16).padStart(2,"0")).join("");return h.slice(0,8)+"-"+h.slice(8,12)+"-"+h.slice(12,16)+"-"+h.slice(16,20)+"-"+h.slice(20)}}<\/script>';
-  // https://user:pass@host/ URLs break relative fetch(); reload without the userinfo.
-  const clean = '<script>(()=>{try{const u=new URL(location.href);if(u.username||u.password){u.username="";u.password="";location.replace(u.href)}}catch{}})()<\/script>';
+  // https://user:pass@host/ URLs break relative fetch(). Chrome hides the userinfo
+  // from location.href but keeps it in document.URL/baseURI; reload without it.
+  const clean = '<script>(()=>{try{const u=new URL(document.URL);if(u.username||u.password){u.username="";u.password="";location.replace(u.href)}}catch{}})()<\/script>';
   return value.replace(/<head\b[^>]*>/iu, (head) => head + clean + script);
 }
 

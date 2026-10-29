@@ -28,6 +28,15 @@ export function syncPatchText(text, ids) {
   while (listEnd < end && lines[listEnd].trim() !== '' &&
          lines[listEnd].match(/^(\s*)/)[1].length > indent.length) listEnd++;
   const unique = [...new Set(ids.filter(id => typeof id === 'string' && id.trim()))];
+  // Once Magpie's own dsh agent route is on, Magpie rewrites this list (adding names) and
+  // restores it whenever it changes ("wrote dsh's route again"). Leave a list that already
+  // carries the same ids alone so the two writers do not fight and reload dsh endlessly.
+  const current = [];
+  for (let i = modelsAt + 1; i < listEnd; i++) {
+    const id = /^\s*-\s*id:\s*(.+?)\s*$/.exec(lines[i]);
+    if (id) current.push(id[1].replace(/^(["'])(.*)\1$/, '$2'));
+  }
+  if (current.length === unique.length && unique.every(id => current.includes(id))) return text;
   const replacement = unique.length
     ? [`${indent}models: ${SYNC_MARK}`, ...unique.map(id => `${indent}  - id: ${JSON.stringify(id)}`)]
     : [`${indent}models: []`];

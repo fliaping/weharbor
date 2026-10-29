@@ -88,10 +88,12 @@ function stripPrefix(pathname) {
   return pathname || '/';
 }
 
-// Opening the page as https://user:pass@host/ makes every relative fetch() throw
-// ("Request cannot be constructed from a URL that includes credentials"); the
-// browser keeps the Basic auth, so reload the same URL without the userinfo.
-const STRIP_CREDENTIALS_SCRIPT = '<script>(()=>{try{const u=new URL(location.href);' +
+// Opening the page as https://user:pass@host/ (or inside a frame whose src resolved
+// against such a page) makes every relative fetch() throw ("Request cannot be
+// constructed from a URL that includes credentials"). Chrome strips the userinfo
+// from location.href but keeps it in document.URL/baseURI, so test document.URL.
+// The browser keeps the Basic auth, so reload the same URL without the userinfo.
+const STRIP_CREDENTIALS_SCRIPT = '<script>(()=>{try{const u=new URL(document.URL);' +
   'if(u.username||u.password){u.username="";u.password="";location.replace(u.href)}}catch{}})()</script>';
 
 function injectHead(text) {

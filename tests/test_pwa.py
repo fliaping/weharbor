@@ -64,11 +64,25 @@ class PwaTests(unittest.TestCase):
                 self.assertEqual(html.count('weharbor-apps.js'), 1)
                 self.assertRegex(html, r'<script src="\./weharbor-apps\.js\?v=[0-9a-f]{12}"></script>')
                 self.assertLess(html.index('weharbor-apps.js'), html.index('<div id="app">'))
+                # First thing in <head>: drop user:pass@ (kept in document.URL) before any fetch.
+                self.assertEqual(html.count('data-weharbor="strip-credentials"'), 1)
+                self.assertIn('new URL(document.URL)', html)
+                self.assertLess(html.index('strip-credentials'), html.index('<title>'))
                 self.assertIn('<title>WeHarbor｜微港</title>', html)
                 self.assertEqual((dashboard / 'pwa-icons').stat().st_mode & 0o777, 0o755)
                 self.assertEqual((dashboard / 'pwa-icons/icon-512.png').stat().st_mode & 0o777, 0o644)
                 self.assertIn('fetch("weharbor.webmanifest",{cache:"no-store"})',
                               (dashboard / 'assets/main.js').read_text())
+
+    def test_other_views_drop_url_credentials_first(self):
+        # /analysis/ (static Nuxt build) gets the script from nginx; /workspace/ ships it inline.
+        conf = (ROOT / 'root/defaults/workspace-proxy.conf').read_text()
+        analysis = conf[conf.index('location /analysis/ {'):conf.index('location /assistant/ {')]
+        self.assertIn("sub_filter '<head>' '<head><script>(()=>{try{const u=new URL(document.URL);", analysis)
+        self.assertIn('proxy_set_header Accept-Encoding "";', analysis)
+        self.assertNotIn('#', conf)
+        index = (ROOT / 'root/usr/share/weharbor/workspace/index.html').read_text()
+        self.assertLess(index.index('new URL(document.URL)'), index.index('<title>'))
 
     @unittest.skipUnless(shutil.which('node'), 'Node needed for dock behavior checks')
     def test_dock_shortcuts_and_proximity_logic(self):
