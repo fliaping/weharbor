@@ -109,6 +109,7 @@ RUN test -f /defaults/default.conf \
         /etc/s6-overlay/s6-rc.d/svc-workspace/run /etc/s6-overlay/s6-rc.d/svc-harness/run \
         /etc/s6-overlay/s6-rc.d/svc-magpie/run \
         /usr/local/bin/stalonetray /usr/local/bin/weharbor-health /usr/local/bin/weharbor-capture-key \
+        /usr/local/bin/dsh \
     && chmod 0440 /etc/sudoers.d/weharbor-capture \
     && visudo -cf /etc/sudoers.d/weharbor-capture
 

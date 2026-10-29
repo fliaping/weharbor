@@ -5,7 +5,7 @@
   const connectionId = () => globalThis.crypto.randomUUID?.() || Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
   const feedback = (text, error = false) => { $('feedback').textContent = text; $('feedback').classList.toggle('error', error); };
   async function api(path, body) {
-    const r = await fetch('/workspace/' + path, {credentials: 'same-origin', cache: 'no-store',
+    const r = await fetch(new URL('/workspace/' + path, location.origin), {credentials: 'same-origin', cache: 'no-store',
       ...(body !== undefined ? {method: 'POST', headers: {'Content-Type':'application/json', 'X-WeHarbor-Action':'workspace'}, body: JSON.stringify(body)} : {})});
     const data = await r.json();
     if (!r.ok) throw new Error([data.error || data.detail || '服务请求失败', data.recovery].filter(Boolean).join('；'));

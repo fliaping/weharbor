@@ -78,7 +78,14 @@ and emails) is enabled by default in `/config/.config/magpie/settings.json`.
 DeepSeek Harness (`dsh`) is pre-wired to Magpie's model gateway via
 `/config/.local/share/weharbor/harness/profiles/web/cordis.patch.yml` and
 `MAGPIE_GATEWAY_KEY`; add upstream model providers and select `dsh`'s active
-model in the Magpie `/magpie/` web UI (or in Harness's own setup UI). WeHarbor
+model in the Magpie `/magpie/` web UI (or in Harness's own setup UI). The
+preset `magpie` route's `models:` list is synced every 15 s from the gateway's
+`GET /v1/models` (marked `# weharbor: synced from magpie /v1/models`), so models
+appear in Harness once a Magpie upstream provider is added; a list without that
+marker is left untouched, and `MAGPIE_MODEL_SYNC=off` disables the sync. `dsh`
+is installed as `/usr/local/bin/dsh` so terminals and Magpie's agent detection
+find it on the normal PATH. The Harness UI language is seeded once to Chinese
+(`locale.preference: zh`); changing it in Settings is kept afterwards. WeHarbor
 does not copy Alpha/WeFlow credentials into Harness. Its state is
 `/config/.local/share/weharbor/harness`.
 The loopback proxy exchanges DSH's process-scoped launch token on the server

@@ -62,11 +62,17 @@ class PwaTests(unittest.TestCase):
                 self.assertEqual(html.count('rel="manifest"'), 1)
                 self.assertEqual(html.count('weharbor-pwa.js'), 1)
                 self.assertEqual(html.count('weharbor-apps.js'), 1)
+                self.assertRegex(html, r'<script src="\./weharbor-apps\.js\?v=[0-9a-f]{12}"></script>')
+                self.assertLess(html.index('weharbor-apps.js'), html.index('<div id="app">'))
                 self.assertIn('<title>WeHarbor｜微港</title>', html)
                 self.assertEqual((dashboard / 'pwa-icons').stat().st_mode & 0o777, 0o755)
                 self.assertEqual((dashboard / 'pwa-icons/icon-512.png').stat().st_mode & 0o777, 0o644)
                 self.assertIn('fetch("weharbor.webmanifest",{cache:"no-store"})',
                               (dashboard / 'assets/main.js').read_text())
+
+    @unittest.skipUnless(shutil.which('node'), 'Node needed for dock behavior checks')
+    def test_dock_shortcuts_and_proximity_logic(self):
+        subprocess.run(['node', str(ROOT / 'tests/dock-logic.cjs'), str(ASSETS / 'weharbor-apps.js')], check=True)
 
     @unittest.skipUnless(shutil.which('node'), 'Node needed for Service Worker behavior checks')
     def test_worker_preserves_auth_errors_and_never_handles_api_or_sse(self):

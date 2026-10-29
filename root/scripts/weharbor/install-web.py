@@ -39,7 +39,8 @@ def install(selkies, assets, nginx):
                 f'<meta name="apple-mobile-web-app-title" content="{TITLE}">'
                 '<link rel="apple-touch-icon" href="./pwa-icons/apple-touch-icon.png">'
                 f'<script defer src="./weharbor-pwa.js?v={revision}"></script>'
-                f'<script defer src="./weharbor-apps.js?v={apps_revision}"></script>')
+                # Not deferred: its capture-phase shortcut hook must register before Selkies' input listeners.
+                f'<script src="./weharbor-apps.js?v={apps_revision}"></script>')
         if re.search(r'</head\s*>', html, re.I):
             html = re.sub(r'</head\s*>', lambda _: tags + '</head>', html, count=1, flags=re.I)
         else:

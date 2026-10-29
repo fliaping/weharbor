@@ -138,6 +138,16 @@ class MagpieProxyTests(unittest.TestCase):
         self.assertTrue(cookie.has_nonstandard_attr('HttpOnly'))
         self.assertNotIn(self.secret, self.logfile.read_text())
 
+    def test_index_reloads_without_url_credentials(self):
+        # user:pass@host URLs break relative fetch(); the injected head script drops the userinfo.
+        head = self.html[:self.html.index('<title>')]
+        self.assertIn('u.username||u.password', head)
+        self.assertIn('location.replace(u.href)', head)
+
+    def test_dsh_model_list_syncs_from_gateway_models(self):
+        subprocess.run(['node', str(ROOT / 'tests/magpie-model-sync.mjs'),
+                        (ROOT / 'root/scripts/workspace/magpie-model-sync.mjs').as_uri()], check=True)
+
     def test_boot_shim_prefixes_magpie_routes_only(self):
         with self.browser.open(self.base + 'boot.js') as response:
             boot_js = response.read().decode()

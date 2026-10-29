@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import http from 'node:http';
 import { spawn } from 'node:child_process';
+import { startModelSync } from './magpie-model-sync.mjs';
 
 const args = process.argv.slice(2);
 const valueAfter = (flag, fallback) => {
@@ -87,7 +88,21 @@ function stripPrefix(pathname) {
   return pathname || '/';
 }
 
+// Opening the page as https://user:pass@host/ makes every relative fetch() throw
+// ("Request cannot be constructed from a URL that includes credentials"); the
+// browser keeps the Basic auth, so reload the same URL without the userinfo.
+const STRIP_CREDENTIALS_SCRIPT = '<script>(()=>{try{const u=new URL(location.href);' +
+  'if(u.username||u.password){u.username="";u.password="";location.replace(u.href)}}catch{}})()</script>';
+
+function injectHead(text) {
+  if (text.includes(STRIP_CREDENTIALS_SCRIPT)) return text;
+  const head = /<head\b[^>]*>/i.exec(text);
+  return head ? text.slice(0, head.index + head[0].length) + STRIP_CREDENTIALS_SCRIPT + text.slice(head.index + head[0].length)
+    : STRIP_CREDENTIALS_SCRIPT + text;
+}
+
 function rewriteHtml(text) {
+  text = injectHead(text);
   if (!PREFIX) return text;
   const escaped = PREFIX.slice(1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return text.replace(
@@ -271,3 +286,11 @@ server.on('upgrade', async (request, socket, head) => {
 });
 
 server.listen(PORT, '127.0.0.1');
+
+if (process.env.MAGPIE_DSH_PATCH && process.env.MAGPIE_MODEL_SYNC !== 'off') {
+  startModelSync({
+    patchPath: process.env.MAGPIE_DSH_PATCH,
+    gateway: GATEWAY,
+    key: process.env.MAGPIE_GATEWAY_KEY || 'magpie',
+  });
+}

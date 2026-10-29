@@ -209,6 +209,12 @@ with urllib.request.urlopen(urllib.request.Request(url + 'weharbor-sw.js', heade
     assert response.headers.get_content_type() == 'application/javascript'
     assert response.headers['Cache-Control'] == 'no-cache'
     assert b'event.respondWith' in response.read()
+with urllib.request.urlopen(urllib.request.Request(url + 'weharbor-apps.js', headers=headers), timeout=5) as response:
+    dock = response.read()
+    for marker in [b'weharbor-apps-button', b'matchShortcut', b'prefers-reduced-motion', b'weharbor-dock-shortcuts']:
+        assert marker in dock, marker
+with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=5) as response:
+    assert re.search(rb'<script src="\./weharbor-apps\.js\?v=[0-9a-f]{12}"></script>', response.read())
 print('Browser authentication, notifications and PWA resources passed')
 with urllib.request.urlopen(urllib.request.Request(url + 'notifications/apps', headers=headers), timeout=5) as response:
     apps = json.load(response)
@@ -349,6 +355,8 @@ with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:3425/v1/mod
         headers={'Authorization': 'Bearer magpie'}), timeout=5) as response:
     assert json.load(response)['object'] == 'list'
 assert 'http://127.0.0.1:3425/v1' in Path('/config/.local/share/weharbor/harness/profiles/web/cordis.patch.yml').read_text()
+assert '    preference: zh' in Path('/config/.local/share/weharbor/harness/profiles/web/cordis.patch.yml').read_text()
+assert Path('/usr/local/bin/dsh').stat().st_mode & 0o111
 subprocess.run(['dpkg', '--verify', 'alpha'], check=True)
 assert Path('/config/Documents/xwechat_files').is_symlink()
 subprocess.run(['pgrep', '-f', '^python3 /scripts/weharbor/window-layout.py$'],

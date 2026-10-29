@@ -1,0 +1,5 @@
+#!/bin/sh
+# DeepSeek Harness CLI on the standard PATH, so terminals and Magpie's agent detection find it.
+: "${DSH_HOME:=/config/.local/share/weharbor/harness}"
+export DSH_HOME
+exec /opt/weharbor/node/bin/node /opt/weharbor/harness/node_modules/@deepseek-ai/dsh/lib/bin.js "$@"

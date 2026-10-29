@@ -2,7 +2,8 @@
 set -euo pipefail
 export HOME=/config
 export XDG_CONFIG_HOME=/config/.config
-export PATH="/opt/weharbor/magpie:/opt/weharbor/harness/node_modules/.bin:/opt/weharbor/node/bin:${PATH}"
+# dsh comes from /usr/local/bin (the terminal PATH) so Magpie does not flag it as off-PATH.
+export PATH="/opt/weharbor/magpie:/opt/weharbor/node/bin:${PATH}"
 export DSH_HOME=/config/.local/share/weharbor/harness
 export MAGPIE_BIN="${MAGPIE_BIN:-/opt/weharbor/magpie/magpie}"
 export MAGPIE_ADDR="${MAGPIE_ADDR:-127.0.0.1:3425}"
@@ -11,6 +12,8 @@ export MAGPIE_WEB_PROXY_PORT="${MAGPIE_WEB_PROXY_PORT:-3430}"
 export MAGPIE_WEB_PROXY_PREFIX=/magpie
 export DO_NOT_TRACK=1
 export MAGPIE_NO_STATS=1
+export MAGPIE_DSH_PATCH="${DSH_HOME}/profiles/web/cordis.patch.yml"
+export MAGPIE_GATEWAY_KEY="${MAGPIE_GATEWAY_KEY:-magpie}"
 
 mkdir -p /config/.config/magpie /config/.local/share/weharbor/magpie "${DSH_HOME}/profiles/web"
 chmod 0700 /config/.config/magpie /config/.local/share/weharbor/magpie "${DSH_HOME}"
@@ -65,6 +68,17 @@ if not patch_text or patch_text == "[]":
         models: []
 '''
     )
+
+# Chinese dsh UI by default (Settings → General → Language still overrides). Seeded once,
+# so a later choice or removal by the user is kept.
+locale_marker = dsh_home / ".weharbor-locale-seeded"
+if not locale_marker.exists():
+    text = patch_path.read_text() if patch_path.exists() else ""
+    if not any(line.startswith("- id: locale") for line in text.splitlines()):
+        block = '- id: locale\n  name: "@deepseek-ai/dsh-client-locale"\n  config:\n    preference: zh\n'
+        text = block if text.strip() in ("", "[]") else text.rstrip("\n") + "\n" + block
+        patch_path.write_text(text)
+    locale_marker.write_text("")
 
 env_path = dsh_home / ".env"
 env_lines = env_path.read_text().splitlines() if env_path.exists() else []

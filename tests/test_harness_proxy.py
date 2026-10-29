@@ -104,6 +104,8 @@ class HarnessProxyTests(unittest.TestCase):
 
     def test_index_bootstraps_scoped_cookie_and_mounted_assets(self):
         self.assertIn('src="/assistant/assets/app.js"', self.html)
+        # user:pass@host URLs break relative fetch(); the head script reloads without them.
+        self.assertIn('if(u.username||u.password)', self.html[:self.html.index('/assistant/assets/app.js')])
         cookie = next(iter(self.jar))
         self.assertEqual(cookie.path, '/assistant/')
         self.assertTrue(cookie.has_nonstandard_attr('HttpOnly'))
