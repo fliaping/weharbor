@@ -1,0 +1,20 @@
+- insert:
+    - id: weharbor-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: weharbor
+        transport: stdio
+        command: /opt/weharbor/python/bin/python
+        args: [/scripts/workspace/mcp_stdio.py]
+        cwd: /config
+    - id: wechat-analysis-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: wechat-analysis
+        transport: stdio
+        command: /opt/weharbor/python/bin/python
+        args: [/opt/weharbor/analysis/scripts/advanced_mcp_stdio.py]
+        cwd: /config
+        env:
+          WECHAT_ANALYSIS_MCP_URL: http://127.0.0.1:10392/api/advanced/mcp
+          WECHAT_ANALYSIS_MCP_TOKEN_FILE: /config/.local/share/weharbor/analysis/advanced/mcp.token

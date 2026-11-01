@@ -40,6 +40,7 @@ def desktop_dpi(env):
 
 def launch_environment(original):
     env = original.copy()
+    env.update(QT_LINUX_ACCESSIBILITY_ALWAYS_ON='1', QT_ACCESSIBILITY='1', NO_AT_BRIDGE='0')
     if env.get('QT_FONT_DPI'):
         return env
     setting = env.get('WECHAT_FIXED_DPI')

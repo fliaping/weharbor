@@ -5,6 +5,10 @@ services:
     platform: linux/amd64
     restart: unless-stopped
     shm_size: ${SHM_SIZE:-1gb}
+    # Chromium singleton sockets require normal private-directory permissions.
+    # NAS ACL inheritance on the image filesystem can override mkdir(0700).
+    tmpfs:
+      - /tmp:rw,exec,mode=1777,size=1g
     volumes:
       - ${DATA_DIR:-./data}:/config
     ports:
@@ -28,4 +32,5 @@ services:
       APP_SWITCHER_MODE: ${APP_SWITCHER_MODE:-web}
       ENABLE_WINDOW_DEFAULTS: ${ENABLE_WINDOW_DEFAULTS:-true}
       ENABLE_BROWSER_NOTIFICATIONS: ${ENABLE_BROWSER_NOTIFICATIONS:-true}
+      ENABLE_MAGPIE: ${ENABLE_MAGPIE:-true}
       SELKIES_ENABLE_BINARY_CLIPBOARD: ${SELKIES_ENABLE_BINARY_CLIPBOARD:-true}

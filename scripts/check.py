@@ -5,6 +5,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,9 +16,10 @@ def main():
     assert lock['schema'] == 1 and lock['platform'] == 'linux/amd64'
     assert re.fullmatch(r'\d+\.\d+\.\d+', lock['project_version'])
     assert re.search(r'@sha256:[0-9a-f]{64}$', lock['base_image'])
-    for name in ['wechat', 'alpha']:
+    for name in ['wechat', 'alpha', 'magpie']:
         assert re.fullmatch(r'[0-9a-f]{64}', lock[name]['sha256'])
     assert lock['alpha']['url'].startswith('https://')
+    assert lock['magpie']['url'].startswith('https://')
     dockerfile = (ROOT / 'Dockerfile').read_text()
     assert f'ARG BASE_IMAGE={lock["base_image"]}\n' in dockerfile
     assert f'ARG PROJECT_VERSION={lock["project_version"]}\n' in dockerfile
@@ -29,9 +31,9 @@ def main():
                 ast.parse(path.read_text(), filename=str(path))
             elif path.suffix == '.sh' or path.read_bytes().startswith(b'#!/usr/bin/env bash') or path.read_bytes().startswith(b'#!/usr/bin/with-contenv bash'):
                 subprocess.run(['bash', '-n', str(path)], check=True)
-            elif path.suffix == '.js' and shutil.which('node'):
+            elif path.suffix in ['.js', '.mjs'] and shutil.which('node'):
                 subprocess.run(['node', '--check', str(path)], check=True)
-    subprocess.run(['python3', '-m', 'unittest', 'discover', '-s', 'tests', '-v'], cwd=ROOT, check=True)
+    subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-v'], cwd=ROOT, check=True)
     print('WeHarbor source validation passed')
 
 

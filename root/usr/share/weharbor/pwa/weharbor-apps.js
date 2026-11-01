@@ -1,5 +1,75 @@
 (() => {
   'use strict';
+  // https://user:pass@host/ breaks every relative fetch() ("Request cannot be constructed
+  // from a URL that includes credentials"). Chrome hides the userinfo from location.href but
+  // keeps it in document.URL / document.baseURI, which relative URLs (and iframe src) resolve
+  // against, so test document.URL. The browser keeps the Basic auth, so reload clean before
+  // any iframe exists.
+  try {
+    const here = new URL(document.URL);
+    if (here.username || here.password) {
+      here.username = ''; here.password = '';
+      location.replace(here.href);
+      return;
+    }
+  } catch {}
+  // Pure helpers (exported on window.WeHarborDock for tests and debugging).
+  const VIEW_ORDER = ['desktop', 'analysis', 'magpie', 'assistant', 'connections'];
+  const VIEW_ICONS = {desktop: '💬', analysis: '📊', magpie: '🛡️', assistant: '🤖', connections: '🔗'};
+  const NEAR_PX = 56, COLLAPSE_DELAY_MS = 400;
+  const isMac = /Mac|iPhone|iPad/.test(globalThis.navigator?.platform || globalThis.navigator?.userAgent || '');
+  const SHORTCUT_PREFIX = isMac ? '⌥' : 'Alt+';
+  // Two-key shortcuts: Alt (Option on macOS) + Digit1-5 / Digit0 / Backquote / Space.
+  // Matched by physical key code (event.code) because Option+digit types "¡™£…" on macOS and
+  // layouts differ. Only Alt counts: Ctrl+Alt (= AltGr on Windows layouts), Shift and Meta
+  // combos pass through, and so do numpad digits (Windows Alt+numpad character codes).
+  // Chrome's Linux Alt+1-8 tab jump is not a reserved accelerator, so preventDefault wins;
+  // Alt+0 is the panel key because desktop environments may grab Alt+Space (window menu)
+  // and GNOME grabs Alt+` before the page sees it. Alt+Space stays as an alias.
+  const SHORTCUT_KEYS = {Digit0: {type: 'panel'}, Space: {type: 'panel'}, Backquote: {type: 'cycle'}};
+  const matchShortcut = (event) => {
+    if (!event || !event.altKey || event.ctrlKey || event.shiftKey || event.metaKey || event.isComposing) return null;
+    const code = event.code || '';
+    const digit = /^Digit([1-9])$/.exec(code);
+    if (digit) { const view = VIEW_ORDER[Number(digit[1]) - 1]; return view ? {type: 'view', view} : null; }
+    return SHORTCUT_KEYS[code] ? {...SHORTCUT_KEYS[code]} : null;
+  };
+  const nextView = (current, step = 1) => {
+    const index = VIEW_ORDER.indexOf(current);
+    return VIEW_ORDER[((index < 0 ? 0 : index) + step + VIEW_ORDER.length) % VIEW_ORDER.length];
+  };
+  // Distance (px) from a point to a rectangle; 0 when inside.
+  const distanceToRect = (x, y, rect) => Math.hypot(
+    Math.max(rect.left - x, 0, x - rect.right), Math.max(rect.top - y, 0, y - rect.bottom));
+  const shortcutLabel = (view) => SHORTCUT_PREFIX + (VIEW_ORDER.indexOf(view) + 1);
+  const logic = {VIEW_ORDER, NEAR_PX, COLLAPSE_DELAY_MS, matchShortcut, nextView, distanceToRect, shortcutLabel};
+  const dock = {logic, handleShortcut: null};
+  globalThis.WeHarborDock = dock;
+  const readShortcutsEnabled = () => {
+    try { return JSON.parse(localStorage.getItem('weharbor-dock-shortcuts')) !== false; } catch { return true; }
+  };
+  const swallowed = new Set();
+  // Capture-phase listener on a window, installed before Selkies wires its own window
+  // listeners, so matched keys never reach the remote desktop.
+  const hookKeys = (target) => {
+    if (!target || target.__weharborDockKeys) return;
+    try {
+      target.__weharborDockKeys = true;
+      target.addEventListener('keydown', (event) => {
+        const action = matchShortcut(event);
+        if (!action || !dock.handleShortcut || !readShortcutsEnabled()) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+        swallowed.add(event.code);
+        if (!event.repeat) dock.handleShortcut(action);
+      }, true);
+      target.addEventListener('keyup', (event) => {
+        if (!swallowed.delete(event.code)) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+      }, true);
+    } catch {}
+  };
+  dock.hookKeys = hookKeys;
+  if (globalThis.window && typeof window.addEventListener === 'function') hookKeys(window);
   const mount = () => {
     if (document.getElementById('weharbor-apps-button')) return;
     const read = (key, fallback) => {
@@ -11,12 +81,31 @@
     let fraction = Number.isFinite(stored.fraction) ? Math.max(0, Math.min(1, stored.fraction)) : .42;
     const style = document.createElement('style');
     style.textContent = `
-      #weharbor-apps-button{position:fixed;width:10px;height:52px;padding:0;z-index:2147483000;
+      #weharbor-apps-button{position:fixed;width:10px;height:52px;padding:0;margin:0;z-index:2147483000;
+        display:flex;align-items:center;justify-content:center;overflow:hidden;
         border:1px solid #6d93b8;border-radius:6px;background:#294662cc;color:#e7f1fa;
-        cursor:grab;touch-action:none;box-shadow:0 1px 7px #0004;transition:background .15s}
+        cursor:grab;touch-action:none;box-shadow:0 1px 7px #0004;
+        transition:width .18s ease,height .18s ease,margin .18s ease,border-radius .18s ease,background .15s,box-shadow .18s}
       #weharbor-apps-button:hover,#weharbor-apps-button:focus-visible{background:#527ea7}
       #weharbor-apps-button:focus-visible{outline:2px solid #b9dfff;outline-offset:2px}
       #weharbor-apps-button::after{content:'⋮';font:18px system-ui}
+      #weharbor-apps-button .dock-icon{display:none;font:20px/1 system-ui;pointer-events:none}
+      #weharbor-apps-button.expanded{width:42px;height:42px;margin:5px 6px;border-radius:50%;
+        background:#294662f2;box-shadow:0 3px 14px #0006}
+      #weharbor-apps-button.expanded::after{content:none}
+      #weharbor-apps-button.expanded .dock-icon{display:block}
+      #weharbor-apps-button.dragging{cursor:grabbing;transition:none}
+      @media (prefers-reduced-motion:reduce){#weharbor-apps-button{transition:none}}
+      #weharbor-apps .app-shortcuts{margin:8px 0 0;color:#bccddd;font-size:12px}
+      #weharbor-apps kbd{font:11px ui-monospace,monospace;border:1px solid #38506b;border-radius:4px;padding:0 3px}
+      #weharbor-workspace-frames{position:fixed;inset:0;z-index:2147482900;background:#f8fafc}
+      #weharbor-workspace-frames[hidden]{display:none}
+      #weharbor-workspace-frames iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#f8fafc}
+      #weharbor-workspace-frames iframe[hidden]{display:none}
+      #weharbor-apps .workspace-views{display:grid;gap:8px;margin-bottom:16px}
+      #weharbor-apps [data-view]{min-height:44px;text-align:left;display:flex;align-items:center;justify-content:space-between}
+      #weharbor-apps [data-view][aria-pressed=true]{border-color:#76c7ab;background:#234c48}
+      #weharbor-apps .workspace-caption{color:#bccddd;font-size:12px;margin:0 0 6px}
       #weharbor-apps{position:fixed;z-index:2147483001;width:min(300px,calc(100vw - 36px));
         max-height:calc(100dvh - 24px);overflow:auto;box-sizing:border-box;padding:16px;
         border:1px solid #38506b;border-radius:14px;background:#101c2df5;color:#edf5fc;
@@ -42,13 +131,22 @@
       #weharbor-apps .app-settings{margin-top:14px;border-top:1px solid #38506b;padding-top:10px}
       #weharbor-apps label{display:flex;align-items:center;gap:7px;padding:4px 0}
       #weharbor-apps input{accent-color:#76c7ab}
+      #weharbor-apps .app-install{margin-top:12px}
+      #weharbor-apps #weharbor-install{min-height:36px;padding:6px 10px;font-size:12px;
+        background:transparent;color:#bccddd}
     `;
     document.head.appendChild(style);
     const launcher = document.createElement('button');
     launcher.id = 'weharbor-apps-button';
     launcher.type = 'button';
-    launcher.title = '应用管理 · 拖动可调整位置';
-    launcher.setAttribute('aria-label', '打开应用管理，拖动可调整位置');
+    launcher.innerHTML = '<span class="dock-icon" aria-hidden="true"></span>';
+    const launcherIcon = launcher.firstChild;
+    const updateLauncherTitle = () => {
+      const keys = readShortcutsEnabled() ? '（' + SHORTCUT_PREFIX + '0）' : '';
+      launcher.title = '应用管理' + keys + ' · 拖动可调整位置';
+      launcher.setAttribute('aria-label', '打开应用管理' + keys + '，拖动可调整位置');
+    };
+    updateLauncherTitle();
     launcher.setAttribute('aria-expanded', 'false');
     launcher.setAttribute('aria-controls', 'weharbor-apps');
     const panel = document.createElement('section');
@@ -57,6 +155,14 @@
     panel.setAttribute('aria-labelledby', 'weharbor-apps-title');
     panel.innerHTML = `<header><h2 id="weharbor-apps-title">应用管理</h2>
       <button type="button" data-close aria-label="收起应用管理">×</button></header>
+      <p class="workspace-caption">全屏工作区</p>
+      <nav class="workspace-views" aria-label="工作区切换">
+        <button type="button" data-view="desktop" aria-pressed="true">微信桌面<span>Selkies</span></button>
+        <button type="button" data-view="analysis" aria-pressed="false">数据分析<span>聊天与媒体</span></button>
+        <button type="button" data-view="magpie" aria-pressed="false">Magpie 网关<span>模型与本地脱敏</span></button>
+        <button type="button" data-view="assistant" aria-pressed="false">DeepSeek 助手<span>AI 对话</span></button>
+        <button type="button" data-view="connections" aria-pressed="false">连接与操作记录<span>网络 · MCP</span></button>
+      </nav>
       <div class="app-row"><button type="button" class="app-switch" data-app="wechat" data-action="switch">
         <span>微信</span><span class="app-status" data-status="wechat">…</span></button>
         <button type="button" data-app="wechat" data-action="restart" title="重启微信" aria-label="重启微信">↻</button></div>
@@ -68,9 +174,74 @@
       <p class="app-hint">点击应用切换；再次点击可轮换窗口。重启前请保存未发送的内容。</p>
       <div class="app-settings"><label><input type="checkbox" data-setting="enabled">浏览器通知</label>
         <label><input type="checkbox" data-setting="wechat">微信通知</label>
-        <label><input type="checkbox" data-setting="alpha">Alpha 通知</label></div>
-      <p class="app-feedback" role="status" aria-live="polite"></p>`;
+        <label><input type="checkbox" data-setting="alpha">Alpha 通知</label>
+        <label><input type="checkbox" data-local="shortcuts">启用切换快捷键（本浏览器）</label>
+        <p class="app-shortcuts" data-shortcut-help></p></div>
+      <p class="app-feedback" role="status" aria-live="polite"></p>
+      <div class="app-install"><button type="button" id="weharbor-install" hidden>安装 WeHarbor</button></div>`;
     const feedback = panel.querySelector('.app-feedback');
+    const shortcutHelp = panel.querySelector('[data-shortcut-help]');
+    const shortcutToggle = panel.querySelector('[data-local="shortcuts"]');
+    const renderShortcuts = () => {
+      const enabled = readShortcutsEnabled();
+      shortcutToggle.checked = enabled;
+      for (const button of panel.querySelectorAll('[data-view]')) {
+        button.title = enabled ? '快捷键 ' + shortcutLabel(button.dataset.view) : '';
+      }
+      shortcutHelp.innerHTML = enabled
+        ? '快捷键：<kbd>' + SHORTCUT_PREFIX + '1–' + VIEW_ORDER.length + '</kbd> 切换视图，<kbd>' + SHORTCUT_PREFIX +
+          '`</kbd> 轮换，<kbd>' + SHORTCUT_PREFIX + '0</kbd> 或 <kbd>' + SHORTCUT_PREFIX + 'Space</kbd> 打开/收起本面板'
+        : '切换快捷键已关闭。';
+      updateLauncherTitle();
+    };
+    shortcutToggle.addEventListener('change', () => {
+      write('weharbor-dock-shortcuts', shortcutToggle.checked);
+      renderShortcuts();
+    });
+    const frames = document.createElement('div');
+    frames.id = 'weharbor-workspace-frames';
+    frames.hidden = true;
+    const views = {analysis: ['/analysis/', '微信数据分析'], magpie: ['/magpie/', 'Magpie 网关'], assistant: ['/assistant/', 'DeepSeek 助手'],
+      connections: ['/workspace/', '连接与操作记录']};
+    let currentView = 'desktop';
+    const showView = (view) => {
+      if (view !== 'desktop' && !views[view]) return;
+      currentView = view;
+      launcherIcon.textContent = VIEW_ICONS[view] || '⋮';
+      for (const child of [...document.body.children]) {
+        if ([launcher, panel, frames, style].includes(child) || ['SCRIPT', 'STYLE'].includes(child.tagName)) continue;
+        if (view !== 'desktop') {
+          if (!child.hasAttribute('data-weharbor-inert')) {
+            child.dataset.weharborInert = child.inert ? 'true' : 'false';
+            child.inert = true;
+          }
+        } else if (child.hasAttribute('data-weharbor-inert')) {
+          child.inert = child.dataset.weharborInert === 'true';
+          delete child.dataset.weharborInert;
+        }
+      }
+      if (view !== 'desktop' && !frames.querySelector('[data-frame="' + view + '"]')) {
+        const frame = document.createElement('iframe');
+        frame.dataset.frame = view; frame.src = views[view][0]; frame.title = views[view][1];
+        frame.referrerPolicy = 'same-origin';
+        // Same-origin views: forward shortcuts and proximity tracking from inside the frame.
+        frame.addEventListener('load', () => {
+          try { hookKeys(frame.contentWindow); hookPointer(frame.contentWindow); } catch {}
+        });
+        frames.appendChild(frame);
+      }
+      for (const frame of frames.children) frame.hidden = frame.dataset.frame !== view;
+      frames.hidden = view === 'desktop';
+      for (const button of panel.querySelectorAll('[data-view]')) button.setAttribute('aria-pressed', String(button.dataset.view === view));
+      write('weharbor-workspace-view', view);
+      close();
+      if (view !== 'desktop') frames.querySelector('[data-frame="' + view + '"]').focus();
+      else launcher.focus();
+    };
+    panel.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-view]');
+      if (button) showView(button.dataset.view);
+    });
     let busy = false, refreshing = false, timer = null, drag = null, suppressClick = false;
     let status = {}, settings = {}, notificationAvailable = false;
     const position = () => {
@@ -83,13 +254,14 @@
       panel.style.top = Math.max(12, Math.min(top, innerHeight - panel.offsetHeight - 12)) + 'px';
     };
     const close = (focus = false) => {
+      if (!panel.hidden) setTimeout(() => scheduleCollapse(), 0);
       panel.hidden = true;
       launcher.setAttribute('aria-expanded', 'false');
       clearInterval(timer); timer = null;
       if (focus) launcher.focus();
     };
     const request = async (path, action, payload = {}) => {
-      const response = await fetch('/notifications/' + path, {
+      const response = await fetch(new URL('/notifications/' + path, location.origin), {
         credentials: 'same-origin', cache: 'no-store',
         ...(action ? {method: 'POST', headers: {'Content-Type': 'application/json', 'X-WeHarbor-Action': action},
           body: JSON.stringify(payload), signal: AbortSignal.timeout(30000)} : {})
@@ -140,13 +312,13 @@
       catch (error) { feedback.textContent = error.message; }
       finally { refreshing = false; }
     };
-    launcher.addEventListener('click', async () => {
-      if (suppressClick) { suppressClick = false; return; }
-      if (!panel.hidden) { close(); return; }
+    const openPanel = async () => {
       panel.hidden = false;
       launcher.setAttribute('aria-expanded', 'true');
       feedback.textContent = '';
       position();
+      setExpanded(true);
+      renderShortcuts();
       timer = setInterval(refresh, 2000);
       await refresh();
       try {
@@ -154,6 +326,11 @@
         notificationAvailable = settings.available !== false;
         render();
       } catch (error) { feedback.textContent = error.message; }
+    };
+    launcher.addEventListener('click', async () => {
+      if (suppressClick) { suppressClick = false; return; }
+      if (!panel.hidden) { close(); return; }
+      await openPanel();
     });
     panel.addEventListener('click', async (event) => {
       const button = event.target.closest('[data-action]');
@@ -167,6 +344,7 @@
           button.dataset.windowId ? {windowId: Number(button.dataset.windowId)} : {});
         feedback.textContent = name + (action === 'restart' ? '已重新启动。' : '已切换。');
         if (action === 'switch') {
+          showView('desktop');
           if (result.windowId) { close(); document.activeElement?.blur(); }
           else feedback.textContent = name + '正在准备窗口，窗口出现后请再次点击。';
         }
@@ -185,9 +363,70 @@
       finally { busy = false; render(); }
     });
     panel.querySelector('[data-close]').addEventListener('click', () => close(true));
+    // Proximity expansion: collapsed handle grows into a round button when the pointer nears it.
+    let expanded = false, collapseTimer = null, touchExpandedAt = 0;
+    const setExpanded = (value) => {
+      clearTimeout(collapseTimer); collapseTimer = null;
+      if (expanded === value) return;
+      expanded = value;
+      launcher.classList.toggle('expanded', value);
+    };
+    const scheduleCollapse = (delay = COLLAPSE_DELAY_MS) => {
+      if (!expanded || collapseTimer) return;
+      collapseTimer = setTimeout(() => {
+        collapseTimer = null;
+        if (drag || !panel.hidden || launcher.matches(':hover')) return;
+        setExpanded(false);
+      }, delay);
+    };
+    const collapsedRect = () => {
+      // Measure against the collapsed footprint so the zone doesn't grow with the circle.
+      const rect = launcher.getBoundingClientRect();
+      if (!expanded) return rect;
+      const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+      const left = side === 'left' ? 0 : innerWidth - 10;
+      return {left, right: left + 10, top: cy - 26, bottom: cy + 26, cx};
+    };
+    const onPointerMove = (event) => {
+      if (launcher.hidden || drag || event.pointerType === 'touch') return;
+      const near = distanceToRect(event.clientX, event.clientY, collapsedRect()) <= (expanded ? NEAR_PX + 16 : NEAR_PX);
+      if (near) setExpanded(true);
+      else scheduleCollapse();
+    };
+    const onPointerDownAnywhere = (event) => {
+      if (launcher.hidden || event.pointerType === 'mouse') return;
+      // Touch/pen: tapping the screen edge next to the handle expands it.
+      if (distanceToRect(event.clientX, event.clientY, collapsedRect()) <= NEAR_PX / 2) {
+        if (!expanded) touchExpandedAt = Date.now();
+        setExpanded(true);
+        clearTimeout(collapseTimer); collapseTimer = null;
+        setTimeout(() => scheduleCollapse(0), 3500);
+      }
+    };
+    function hookPointer(target) {
+      if (!target || target.__weharborDockPointer) return;
+      try {
+        target.__weharborDockPointer = true;
+        // Passive, no capture of the pointer: only observes, never alters input forwarding.
+        target.addEventListener('pointermove', onPointerMove, {capture: true, passive: true});
+        target.addEventListener('pointerdown', onPointerDownAnywhere, {capture: true, passive: true});
+        target.document?.documentElement?.addEventListener('mouseleave', () => scheduleCollapse(), {passive: true});
+      } catch {}
+    }
+    hookPointer(window);
+    launcher.addEventListener('pointerleave', () => scheduleCollapse(), {passive: true});
+    launcher.addEventListener('focus', () => {
+      try { if (launcher.matches(':focus-visible')) setExpanded(true); } catch {}
+    });
+    launcher.addEventListener('blur', () => scheduleCollapse());
     launcher.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
       suppressClick = false;
+      // First tap on a still-collapsed handle (touch) only expands it.
+      if (event.pointerType !== 'mouse' && (!expanded || Date.now() - touchExpandedAt < 350)) {
+        touchExpandedAt = 0; setExpanded(true); suppressClick = true; return;
+      }
+      setExpanded(true);
       drag = {id: event.pointerId, x: event.clientX, y: event.clientY, moved: false};
       launcher.setPointerCapture(event.pointerId);
     });
@@ -196,7 +435,8 @@
       if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > 6) drag.moved = true;
       if (!drag.moved) return;
       close();
-      launcher.style.left = Math.max(0, Math.min(innerWidth - 10, event.clientX - 5)) + 'px';
+      launcher.classList.add('dragging');
+      launcher.style.left = Math.max(0, Math.min(innerWidth - 54, event.clientX - 27)) + 'px';
       launcher.style.right = '';
       launcher.style.top = Math.max(8, Math.min(innerHeight - 60, event.clientY - 26)) + 'px';
     });
@@ -209,7 +449,9 @@
         suppressClick = true;
       }
       drag = null;
+      launcher.classList.remove('dragging');
       position();
+      scheduleCollapse(1200);
     };
     launcher.addEventListener('pointerup', finishDrag);
     launcher.addEventListener('pointercancel', finishDrag);
@@ -225,8 +467,23 @@
         element.addEventListener(type, (event) => event.stopPropagation());
       }
     }
-    document.body.append(launcher, panel);
+    document.body.append(frames, launcher, panel);
+    window.dispatchEvent(new CustomEvent('weharbor:apps-ready'));
     position();
+    showView(read('weharbor-workspace-view', 'desktop'));
+    renderShortcuts();
+    dock.handleShortcut = (action) => {
+      if (launcher.hidden) return;
+      if (action.type === 'panel') {
+        if (panel.hidden) { openPanel(); panel.querySelector('[data-view][aria-pressed=true]')?.focus(); }
+        else close(currentView === 'desktop');
+        return;
+      }
+      showView(action.type === 'cycle' ? nextView(currentView) : action.view);
+      // Hand keyboard focus back to the stream instead of leaving it on the dock button.
+      if (currentView === 'desktop') launcher.blur();
+      setExpanded(true); scheduleCollapse(1200);
+    };
     addEventListener('resize', position);
     request('config').then((config) => {
       if (config.appSwitcherEnabled === false) { close(); launcher.hidden = true; }

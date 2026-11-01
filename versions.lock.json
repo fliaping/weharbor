@@ -10,6 +10,35 @@
     "url": "https://github.com/fliaping/weharbor/releases/download/component-assets/WeChatLinux_4.1.13.23_amd64.deb",
     "sha256": "b7d0f8d53e9f648bc2c77a6096a04100d008f2d9f0d3988a2a4859b5992aca0a"
   },
+  "analysis": {
+    "version": "61b31433d18bb638b5f51dbdeb1a461c16d84cfe",
+    "filename": "analysis.tar.gz",
+    "url": "https://codeload.github.com/fliaping/WeChatDataAnalysis/tar.gz/61b31433d18bb638b5f51dbdeb1a461c16d84cfe",
+    "sha256": "602c24c41c7ebefa15e626861efaa90dd4dc956a68584cafb0561b507eee407d"
+  },
+  "node": {
+    "version": "24.16.0",
+    "filename": "node.tar.xz",
+    "url": "https://nodejs.org/dist/v24.16.0/node-v24.16.0-linux-x64.tar.xz",
+    "sha256": "d804845d34eddc21dc1092b519d643ef40b1f58ec5dec5c22b1f4bd8fabde6c9"
+  },
+  "tailscale": {
+    "version": "1.104.1",
+    "filename": "tailscale.tgz",
+    "url": "https://pkgs.tailscale.com/stable/tailscale_1.104.1_amd64.tgz",
+    "sha256": "108d1d96ecf410d305571e173516f27038f870919a9b89c914a167c6d33a4528"
+  },
+  "cloudflared": {
+    "version": "2026.10.1",
+    "filename": "cloudflared",
+    "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.10.1/cloudflared-linux-amd64",
+    "sha256": "3bfc539f45d2620c71debb7a86be0efa737ed5ccbad9eb85c787116900e5c586"
+  },
+  "harness": {
+    "version": "0.2.1-rc.2",
+    "package": "@deepseek-ai/dsh",
+    "integrity": "runtime/harness/package-lock.json"
+  },
   "selkies": {
     "version": "2.0.0",
     "note": "bundled by the LinuxServer.io baseimage-selkies debiantrixie image"
@@ -20,5 +49,12 @@
     "original_filename": "Alpha-0.2.0-x64.deb",
     "url": "https://github.com/xunchahaha/alpha-releases/releases/download/v0.2.0/Alpha-0.2.0-x64.deb",
     "sha256": "9d79a56b88981c496818d93600698d11f8e21d759381c66c3fec3a10b38980d6"
+  },
+  "magpie": {
+    "version": "0.1.1734",
+    "filename": "magpie",
+    "original_filename": "magpie-cli-linux-amd64",
+    "url": "https://github.com/yetone/magpie/releases/download/v0.1.1734/magpie-cli-linux-amd64",
+    "sha256": "5eb34a60108bf19f8d7c1a31e31361a2708924c78daec13121c4ab51fec5c85a"
   }
 }

@@ -1,0 +1,39 @@
+#!/opt/weharbor/python/bin/python -I
+"""Fixed privileged capture entry: no arguments, no caller Python paths."""
+import json
+import os
+import pwd
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, '/opt/weharbor/analysis/src')
+os.environ.pop('WECHAT_TOOL_CAPTURE_HELPER', None)
+os.environ['HOME'] = '/config'
+if len(sys.argv) != 1 or os.geteuid() != 0:
+    raise SystemExit('Use the fixed sudo entry without arguments')
+request = json.loads(sys.stdin.read(4096))
+if request.get('mode') == 'database':
+    from wechat_decrypt_tool.vendor.wcdb_key_tool import tool
+    pid = tool._find_wechat_pid()
+    if Path('/proc/'+str(pid)).stat().st_uid != pwd.getpwnam('abc').pw_uid:
+        raise SystemExit('WeChat process is not owned by the desktop user')
+    tool._cleanup_tracer = lambda pid: None
+    print(json.dumps({'key':tool.capture_passphrase(pid=pid, timeout=120)}))
+elif request.get('mode') == 'image':
+    account = Path(request['account_dir']).resolve()
+    if not account.is_relative_to(Path('/config').resolve()) or not (account/'db_storage').is_dir():
+        raise SystemExit('Invalid local account directory')
+    from wechat_decrypt_tool.image_key_memory_scan import scan_image_key_from_memory
+    result = scan_image_key_from_memory(account, timeout=60)
+    print(json.dumps(result.as_dict() if result else None))
+elif request.get('mode') == 'session':
+    sys.path.insert(0, '/scripts/workspace')
+    from session_identity import capture, IdentityError
+    try:
+        print(json.dumps(capture(request.get('account'))))
+    except (IdentityError, OSError, ValueError, KeyError, subprocess.SubprocessError):
+        # Never expose process memory, account values or paths on failure.
+        print(json.dumps({'verified': False, 'error': 'SESSION_IDENTITY_UNAVAILABLE'}))
+else:
+    raise SystemExit('Unsupported capture mode')

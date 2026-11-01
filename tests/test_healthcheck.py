@@ -76,3 +76,12 @@ class HealthcheckTests(unittest.TestCase):
     def test_desktop_or_disabled_dock_does_not_require_web_asset(self):
         for mode, enabled in [('desktop', 'true'), ('web', 'false')]:
             self.assertNotIn('http://127.0.0.1:3000/weharbor-apps.js', self.check(b'', mode, enabled))
+
+    def test_magpie_process_is_checked_when_enabled(self):
+        with patch.dict(os.environ, {'AUTO_START_ALPHA': 'false', 'AUTO_START_WECHAT': 'false',
+                                     'ENABLE_APP_SWITCHER': 'false', 'ENABLE_MAGPIE': 'true'}, clear=True), \
+                patch.object(health, 'get', return_value=b'{"status":"ok"}'), \
+                patch.object(health.subprocess, 'run',
+                             return_value=subprocess.CompletedProcess([], 0)) as run:
+            health.main()
+            self.assertTrue(any(call.args[0] == ['pgrep', '-x', 'magpie'] for call in run.call_args_list))

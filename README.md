@@ -12,6 +12,15 @@ Selkies 2.0 基础镜像（Debian trixie），把官方 Linux 微信和 Alpha �
 [安装为桌面应用](docs/pwa.md) ·
 [组件许可](THIRD_PARTY_NOTICES.md)
 
+集成工作区开发版：边缘挂件可全屏切换桌面、Linux 聊天分析、Magpie 模型网关、DeepSeek
+Harness 和连接设置。支持已有 WeFlow 密钥、数据库/WAL 与图片解密、
+独立 MCP/Skill，以及带回执的桌面 Action。内置 Magpie 网页模式与本地可逆脱敏网关
+（默认开启密钥与个人敏感信息脱敏），DeepSeek Harness（dsh 助手）默认接入 Magpie
+提供的模型服务，同时加载微信工具和分析工作台工具，可读取数据、按授权发送消息、
+管理自动化任务及连续刷新保存朋友圈。
+分析工作台开放全部功能入口，并分别标明已实现、待连接与尚未实现。配置和限制见
+[工作区说明](docs/workspace.md)。
+
 ## 当前状态
 
 源码版本 0.1.0，仓库为 [fliaping/weharbor](https://github.com/fliaping/weharbor)。
@@ -30,7 +39,8 @@ xunchahaha/alpha-releases 的 v0.2.0 Release 下载；构建时都会校验锁�
 ## 能力
 
 - 在浏览器里使用官方 Linux 微信与 Alpha（Selkies 2.0，WebSocket 传输，支持剪贴板）。
-- 网页贴边应用条，可拖动、切换微信和 Alpha、选择窗口、重启应用及管理通知。
+- 网页贴边应用条，鼠标靠近展开为小圆球，可拖动、切换微信和 Alpha、选择窗口、重启应用及管理通知；
+  Alt+1–5 切换视图、Alt+` 轮换、Alt+0 打开面板（macOS 用 Option）（见 [运维说明](docs/operations.md#网页应用管理)）。
 - Alpha 默认最小化，微信默认获得焦点；登录后只自动最大化微信主窗口一次。
 - 将聊天推送与桌面通知转发为浏览器原生通知。
 - 支持 PWA 安装，以独立窗口从电脑桌面或手机主屏幕打开。
@@ -51,7 +61,7 @@ cd weharbor
 docker compose up -d
 ~~~
 
-build.sh 会下载并校验两个锁定版本的安装包。离线构建可提前把
+build.sh 会下载并校验 versions.lock.json 中锁定的组件。离线构建可提前把
 Alpha-0.2.0-x64.deb 放到 downloads/alpha.deb，把
 WeChatLinux_4.1.13.23_amd64.deb 放到 downloads/wechat.deb。
 
@@ -114,6 +124,7 @@ npx --yes skills add https://github.com/fliaping/weharbor --skill alpha-api --ye
 | APP_SWITCHER_MODE | web | 网页贴边应用条；desktop 恢复旧桌面切换器 |
 | ENABLE_WINDOW_DEFAULTS | true | 初始窗口布局 |
 | ENABLE_BROWSER_NOTIFICATIONS | true | 浏览器通知 |
+| ENABLE_MAGPIE | true | 启动 Magpie 网页管理端与本地脱敏模型网关 |
 
 GPU 加速可选：宿主机存在 /dev/dri 时运行
 docker compose -f compose.yaml -f compose.gpu.yaml up -d。

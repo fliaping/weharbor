@@ -4,7 +4,7 @@ A self-hosted WeChat desktop, local data API and message notifications in one
 container. WeHarbor builds directly on the LinuxServer.io Selkies 2.0 base image
 (Debian trixie) and installs the official Linux WeChat and Alpha, unmodified.
 
-Version 0.1.0 includes WeChat 4.1.13.23, Alpha 0.2.0 and Selkies 2.0.0
+Version 0.1.0 includes WeChat 4.1.13.23, Alpha 0.2.0, Magpie 0.1.1734, DeepSeek Harness 0.2.1-rc.2 and Selkies 2.0.0
 (`ghcr.io/linuxserver/baseimage-selkies:debiantrixie`, pinned by digest), on
 linux/amd64 only. Source: [fliaping/weharbor](https://github.com/fliaping/weharbor).
 

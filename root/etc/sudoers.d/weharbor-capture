@@ -1,0 +1,1 @@
+abc ALL=(root) NOPASSWD: /usr/local/bin/weharbor-capture-key ""
