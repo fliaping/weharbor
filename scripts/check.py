@@ -16,9 +16,9 @@ def main():
     assert lock['schema'] == 1 and lock['platform'] == 'linux/amd64'
     assert re.fullmatch(r'\d+\.\d+\.\d+', lock['project_version'])
     assert re.search(r'@sha256:[0-9a-f]{64}$', lock['base_image'])
-    for name in ['wechat', 'alpha', 'magpie']:
+    for name in ['wechat', 'analysis', 'magpie']:
         assert re.fullmatch(r'[0-9a-f]{64}', lock[name]['sha256'])
-    assert lock['alpha']['url'].startswith('https://')
+    assert 'alpha' not in lock, 'Alpha is no longer part of WeHarbor'
     assert lock['magpie']['url'].startswith('https://')
     dockerfile = (ROOT / 'Dockerfile').read_text()
     assert f'ARG BASE_IMAGE={lock["base_image"]}\n' in dockerfile

@@ -3,7 +3,7 @@ from contextlib import contextmanager
 import threading
 
 
-PRIMARY_CLASS = {'wechat': 'wechat', 'alpha': 'alpha-desktop'}
+PRIMARY_CLASS = {'wechat': 'wechat'}
 
 
 class WindowController:
@@ -46,11 +46,11 @@ class Desktop:
         return value.value if value is not None else []
 
     def snapshot(self):
-        owners = {pid: app for app in ('wechat', 'alpha') for pid in self.processes(app)}
+        owners = {pid: app for app in PRIMARY_CLASS for pid in self.processes(app)}
         active = self.values(self.root, '_NET_ACTIVE_WINDOW')
         active_id = int(active[0]) if len(active) else None
         clients = self.values(self.root, '_NET_CLIENT_LIST')
-        result = {'wechat': [], 'alpha': []}
+        result = {app: [] for app in PRIMARY_CLASS}
         for wid in clients:
             try:
                 window = self.connection.create_resource_object('window', int(wid))
@@ -68,7 +68,7 @@ class Desktop:
                     continue
                 title = self.values(window, '_NET_WM_NAME')
                 title = bytes(title).decode('utf-8', errors='replace').strip(chr(0)) if len(title) else ''
-                title = title or str(window.get_wm_name() or '') or ('微信' if app == 'wechat' else 'Alpha')
+                title = title or str(window.get_wm_name() or '') or '微信'
                 classes = {str(value).lower() for value in (window.get_wm_class() or ())}
                 states = self.values(window, '_NET_WM_STATE')
                 result[app].append({'id': int(wid), 'title': title[:200],

@@ -9,15 +9,13 @@ import os
 import re
 import threading
 import time
-from collections import OrderedDict
 from itertools import count
-from pathlib import Path
 
 import dbus
 from dbus import lowlevel
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
-from aiohttp import ClientError, ClientSession, ClientTimeout, web
+from aiohttp import web
 
 from notification_config import ensure_settings, load_settings
 from app_control import register_routes
@@ -28,12 +26,7 @@ NOTIFICATION_INTERFACE = "org.freedesktop.Notifications"
 OBJECT_PATH = "/org/freedesktop/Notifications"
 LISTEN_HOST = "127.0.0.1"
 LISTEN_PORT = 8765
-SUPPORTED_APPS = {"wechat", "alpha"}
-ALPHA_TOKEN_PATH = Path(
-    os.environ.get("ALPHA_API_TOKEN_FILE", "/config/.config/weharbor/alpha-api-token")
-)
-ALPHA_PUSH_RECONNECT_SECONDS = 3
-ALPHA_PUSH_EVENT_TTL_SECONDS = 15 * 60
+SUPPORTED_APPS = {"wechat"}
 
 
 def env_enabled(name, default=True):
@@ -64,8 +57,6 @@ def classify_app(app_name, summary, hints):
             str(summary or ""),
         )
     ).lower()
-    if "alpha" in identity:
-        return "alpha"
     if any(value in identity for value in ("wechat", "weixin", "微信")):
         return "wechat"
     return None
@@ -76,11 +67,6 @@ class NotificationRelay:
         self.loop = None
         self.clients = set()
         self.browser_status = {}
-        self.alpha_push_status = {
-            "stage": "starting",
-            "lastEvent": None,
-            "lastError": None,
-        }
 
     def attach_loop(self, loop):
         self.loop = loop
@@ -116,7 +102,6 @@ class NotificationRelay:
                 "status": "ok",
                 "clients": len(self.clients),
                 "browser_status": list(self.browser_status.values()),
-                "alpha_push": self.alpha_push_status,
             }
         )
 
@@ -189,249 +174,6 @@ class NotificationRelay:
         finally:
             self.clients.discard(queue)
         return response
-
-
-def load_alpha_push_config():
-    """Alpha encrypts its API token with safeStorage, so the bridge cannot read
-    it from Alpha's settings. The user opts in by saving the token copied from
-    Alpha's settings page to ALPHA_API_TOKEN_FILE (or ALPHA_API_TOKEN)."""
-    token = os.environ.get("ALPHA_API_TOKEN", "").strip()
-    if not token:
-        try:
-            token = ALPHA_TOKEN_PATH.read_text(encoding="utf-8").strip()
-        except (FileNotFoundError, OSError):
-            return None
-    if not token:
-        return None
-    try:
-        port = int(os.environ.get("ALPHA_API_PORT", "5031"))
-    except ValueError:
-        port = 5031
-    if not 1 <= port <= 65535:
-        port = 5031
-    return {
-        "enabled": True,
-        "url": f"http://127.0.0.1:{port}/api/v1/push/messages",
-        "token": token,
-    }
-
-
-def message_notification(payload):
-    source_name = plain_text(payload.get("sourceName")) or "微信"
-    group_name = plain_text(payload.get("groupName"))
-    content = plain_text(payload.get("content")) or "[新消息]"
-    if group_name:
-        return group_name, f"{source_name}: {content}"
-    return source_name, content
-
-
-class RecentPushEvents:
-    def __init__(self):
-        self.events = OrderedDict()
-
-    def add(self, payload):
-        now = time.monotonic()
-        cutoff = now - ALPHA_PUSH_EVENT_TTL_SECONDS
-        while self.events:
-            _, created_at = next(iter(self.events.items()))
-            if created_at >= cutoff:
-                break
-            self.events.popitem(last=False)
-
-        raw_id = str(payload.get("rawid", "")).strip()
-        event_name = str(payload.get("event", "message.new"))
-        key = f"{event_name}:{raw_id}" if raw_id else json.dumps(
-            payload, ensure_ascii=False, sort_keys=True
-        )
-        if key in self.events:
-            return False
-        self.events[key] = now
-        return True
-
-
-async def consume_alpha_push(relay):
-    """Forward Alpha's structured message SSE directly to browser clients."""
-    seen = RecentPushEvents()
-    last_event_id = ""
-    process_started_at = int(time.time())
-    timeout = ClientTimeout(total=None, connect=5, sock_read=60)
-
-    async with ClientSession(timeout=timeout) as session:
-        while True:
-            config = load_alpha_push_config()
-            if not config:
-                relay.alpha_push_status = {
-                    "stage": "waiting-for-config",
-                    "lastEvent": None,
-                    "lastError": None,
-                }
-                await asyncio.sleep(ALPHA_PUSH_RECONNECT_SECONDS)
-                continue
-            if config.get("error"):
-                relay.alpha_push_status = {
-                    "stage": "configuration-error",
-                    "lastEvent": None,
-                    "lastError": config["error"],
-                }
-                LOGGER.warning("Alpha push: %s", config["error"])
-                await asyncio.sleep(10)
-                continue
-            if not config["enabled"]:
-                relay.alpha_push_status = {
-                    "stage": "disabled",
-                    "lastEvent": None,
-                    "lastError": "Alpha push is disabled",
-                }
-                await asyncio.sleep(ALPHA_PUSH_RECONNECT_SECONDS)
-                continue
-
-            headers = {
-                "Authorization": f"Bearer {config['token']}",
-                "Accept": "text/event-stream",
-            }
-            if last_event_id:
-                headers["Last-Event-ID"] = last_event_id
-
-            try:
-                relay.alpha_push_status = {
-                    "stage": "connecting",
-                    "lastEvent": relay.alpha_push_status.get("lastEvent"),
-                    "lastError": None,
-                }
-                async with session.get(config["url"], headers=headers) as response:
-                    if response.status != 200:
-                        error = f"HTTP {response.status}"
-                        relay.alpha_push_status = {
-                            "stage": "error",
-                            "lastEvent": relay.alpha_push_status.get(
-                                "lastEvent"
-                            ),
-                            "lastError": error,
-                        }
-                        LOGGER.warning("Alpha push connection failed: %s", error)
-                        await response.read()
-                        await asyncio.sleep(ALPHA_PUSH_RECONNECT_SECONDS)
-                        continue
-
-                    LOGGER.info("connected to Alpha message push stream")
-                    relay.alpha_push_status = {
-                        "stage": "connected",
-                        "lastEvent": relay.alpha_push_status.get("lastEvent"),
-                        "lastError": None,
-                    }
-                    event_name = ""
-                    event_id = ""
-                    data_lines = []
-                    async for raw_line in response.content:
-                        line = raw_line.decode("utf-8", errors="replace").rstrip(
-                            "\r\n"
-                        )
-                        if line:
-                            if line.startswith("event:"):
-                                event_name = line[6:].strip()
-                            elif line.startswith("id:"):
-                                event_id = line[3:].strip()
-                            elif line.startswith("data:"):
-                                data_lines.append(line[5:].lstrip())
-                            continue
-
-                        if event_id:
-                            last_event_id = event_id
-                        if event_name not in {
-                            "message.new",
-                            "message.revoke",
-                        }:
-                            event_name = ""
-                            event_id = ""
-                            data_lines = []
-                            continue
-                        try:
-                            payload = json.loads("\n".join(data_lines))
-                        except (json.JSONDecodeError, TypeError):
-                            LOGGER.warning(
-                                "ignored malformed Alpha push event %r",
-                                event_name,
-                            )
-                        else:
-                            if isinstance(payload, dict):
-                                payload["event"] = event_name
-                                try:
-                                    message_timestamp = int(
-                                        payload.get("timestamp", 0)
-                                    )
-                                except (TypeError, ValueError):
-                                    message_timestamp = 0
-                                stale_replay = (
-                                    message_timestamp > 0
-                                    and message_timestamp
-                                    < process_started_at - 3
-                                )
-                                if stale_replay:
-                                    LOGGER.info(
-                                        "skipped stale Alpha replay event=%r",
-                                        event_name,
-                                    )
-                                elif seen.add(payload):
-                                    settings = load_settings()
-                                    enabled = (
-                                        env_enabled(
-                                            "ENABLE_BROWSER_NOTIFICATIONS",
-                                            True,
-                                        )
-                                        and settings["enabled"]
-                                        and settings["apps"].get(
-                                            "wechat", False
-                                        )
-                                    )
-                                    title, body = message_notification(payload)
-                                    if enabled:
-                                        raw_id = str(
-                                            payload.get("rawid", "")
-                                        ).strip()
-                                        relay.publish(
-                                            {
-                                                "id": (
-                                                    f"{event_name}:{raw_id}"
-                                                    if raw_id
-                                                    else event_id
-                                                ),
-                                                "app": "wechat",
-                                                "title": title,
-                                                "body": body,
-                                            }
-                                        )
-                                    relay.alpha_push_status = {
-                                        "stage": (
-                                            "event-forwarded"
-                                            if enabled
-                                            else "event-suppressed"
-                                        ),
-                                        "lastEvent": {
-                                            "event": event_name,
-                                            "timestamp": int(time.time()),
-                                        },
-                                        "lastError": None,
-                                    }
-                                    LOGGER.info(
-                                        "Alpha push event=%r "
-                                        "browser_forwarded=%s",
-                                        event_name,
-                                        enabled,
-                                    )
-                        event_name = ""
-                        event_id = ""
-                        data_lines = []
-            except (ClientError, asyncio.TimeoutError, OSError) as error:
-                relay.alpha_push_status = {
-                    "stage": "error",
-                    "lastEvent": relay.alpha_push_status.get("lastEvent"),
-                    "lastError": type(error).__name__,
-                }
-                LOGGER.warning(
-                    "Alpha push stream disconnected: %s",
-                    type(error).__name__,
-                )
-                await asyncio.sleep(ALPHA_PUSH_RECONNECT_SECONDS)
 
 
 class FreedesktopNotificationMonitor:
@@ -521,7 +263,6 @@ async def serve_http(relay, ready):
     await runner.setup()
     site = web.TCPSite(runner, LISTEN_HOST, LISTEN_PORT)
     await site.start()
-    push_task = asyncio.create_task(consume_alpha_push(relay))
     ready.set()
     LOGGER.info(
         "notification bridge listening on http://%s:%s",
@@ -531,7 +272,6 @@ async def serve_http(relay, ready):
     try:
         await asyncio.Event().wait()
     finally:
-        push_task.cancel()
         await runner.cleanup()
 
 

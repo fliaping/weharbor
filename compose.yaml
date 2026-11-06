@@ -14,8 +14,7 @@ services:
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-3000}:3000"
       - "${BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-3001}:3001"
-      # Alpha binds 127.0.0.1:5031 inside the container; nginx republishes it on 5032.
-      - "${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-5031}:5032"
+    # Chat analysis reads the database key from the WeChat process.
     cap_add:
       - SYS_PTRACE
     environment:
@@ -26,7 +25,6 @@ services:
       CUSTOM_USER: ${CUSTOM_USER:-weharbor}
       PASSWORD: ${PASSWORD:?Run scripts/init.sh or set PASSWORD in .env}
       AUTO_START_WECHAT: ${AUTO_START_WECHAT:-true}
-      AUTO_START_ALPHA: ${AUTO_START_ALPHA:-true}
       AUTO_START_QQ: "false"
       ENABLE_APP_SWITCHER: ${ENABLE_APP_SWITCHER:-true}
       APP_SWITCHER_MODE: ${APP_SWITCHER_MODE:-web}

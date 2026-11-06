@@ -1,0 +1,11 @@
+#!/bin/sh
+# WeHarbor: provide a Documents path for dsh's first-use workspace without
+# requiring the xdg-user-dirs package inside the container.
+case "$1" in
+  DOCUMENTS|DOWNLOAD|DESKTOP|MUSIC|PICTURES|VIDEOS|TEMPLATES|PUBLICSHARE)
+    printf '%s\n' "${XDG_DOCUMENTS_DIR:-/config/Documents}"
+    ;;
+  *)
+    printf '%s\n' "${HOME:-/config}"
+    ;;
+esac

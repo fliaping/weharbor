@@ -12,21 +12,8 @@ docker compose logs --tail=100
 ~~~
 
 Docker 健康检查覆盖浏览器桌面、启用的客户端、窗口切换器与通知桥接器。
-Alpha 除了桌面进程，还检查内部引擎、安全服务与数据服务；仅有空白窗口不算健康。
-Alpha 的 HTTP API 未启用时不会因此判定故障；启用后 /health 会被额外检查。
 未登录微信或未设置数据库密钥时，容器仍可健康运行，等待用户完成配置。
 首次登录、数据库密钥获取顺序及常见读取问题见 [首次使用教程](first-run.md)。
-
-### Alpha 空白窗口与私有目录权限
-
-部分 NAS 的目录权限继承会把 Alpha 私有目录创建为 0705，触发其安全策略，
-日志出现 SECURITY_RUNTIME_POLICY_REJECTED、application lock is unavailable
-或 ENGINE_NOT_STARTED。启动器会在启动 Alpha 前修复
-/config/.local/share/com.alpha.guard 与 /config/.local/state/alpha：
-目录设为 0700，普通文件设为 0600，并使用 umask 077 启动应用。
-修复保留文件内容，不跟随目录内的符号链接，也不修改其他应用目录或厂商程序。
-无法修复时会输出具体错误并停止本次启动，请检查卷是否只读及 PUID/PGID 是否正确。
-升级后通过网页重启 Alpha 或重启容器即可应用；日志位于 /config/.local/log/alpha.log。
 
 Compose 还将容器内的 /tmp 配置为 1 GiB tmpfs，避免 NAS ACL 继承改变 Chromium
 临时目录权限，导致进程锁初始化报 Socket path too long 并退出。已有部署使用
@@ -63,10 +50,10 @@ docker compose exec weharbor weharbor-health
 
 ## 从旧集成迁移
 
-1. 记录旧容器的镜像、数据挂载源路径、用户 UID/GID 和 API 端口。
+1. 记录旧容器的镜像、数据挂载源路径、用户 UID/GID 和端口。
 2. 停止旧容器，备份完整数据目录和部署配置。
 3. 在 WeHarbor 的 .env 中把 DATA_DIR 指向该数据目录，设置原 UID/GID 和端口。
-4. 启动新容器，核对微信登录、Alpha 数据读取与浏览器通知。
+4. 启动新容器，核对微信登录、分析页数据读取与浏览器通知。
 
 同一个微信数据目录不能同时由两个容器使用。
 
@@ -75,14 +62,16 @@ docker compose exec weharbor weharbor-health
 新镜像首次启动时，init-weharbor-profile 会把引用旧脚本的
 /config/.config/openbox/autostart 与 menu.xml 替换为新默认值（原文件保留为
 *.legacy-<时间戳>），并把旧数据应用目录中的应用条与通知设置复制到 .config/weharbor。
-微信登录数据保持不变；旧数据应用的配置与 Token 不会迁移，需要在 Alpha 中重新完成
-首次设置并生成新的 API Token。.env 中旧的 API 端口变量改为 API_PORT，
-自动启动变量改为 AUTO_START_ALPHA；自动登录与夜间重启相关变量已不再使用。
-可对照 .env.example 更新。
+微信登录数据保持不变；旧数据应用的配置与 Token 不会迁移。
+Alpha 已从镜像中移除：autostart 或 menu.xml 中引用 /scripts/alpha/ 的旧配置同样会被替换；
+.env 中的 API_BIND_ADDRESS、API_PORT、AUTO_START_ALPHA 不再使用，5031 端口不再发布；
+数据目录中旧的 Alpha 文件（如 .local/share/com.alpha.guard、.local/state/alpha、
+.config/weharbor/alpha-api-token）不会被自动删除，可自行清理。
+自动登录与夜间重启相关变量也已不再使用。可对照 .env.example 更新。
 
 ## 初始窗口布局
 
-Alpha 主窗口默认最小化，微信先获得焦点。登录后只最大化当前微信进程的
+微信先获得焦点。登录后只最大化当前微信进程的
 一个主窗口一次；聊天、图片、设置等后续子窗口不自动最大化。用户手动还原
 主窗口后，助手不会强制再次最大化。微信重启或重新创建主窗口后会重新识别。
 
@@ -100,14 +89,18 @@ WeHarbor window defaults: begin / end 之间的规则，重新加载 Openbox。
 小条收起时只占 10px，鼠标移动只被被动监听，不影响远程桌面的输入。
 拖动后自动吸附到左右边缘，位置记在当前浏览器；点击展开，点击空白处或按 Esc 收起。
 
+浏览器默认进入**统一工作区**：左侧导航、顶栏状态芯片、微信主画面，以及可拖拽调整的右侧并排面板（分析 / 助手 / Magpie / 连接）。Ctrl/⌘+K 打开命令面板；移动端为底部标签。应用管理面板仍可用 Alt+0。
+
+工作区围绕微信原窗口、数据分析与助手三类窗口；浏览器通知来自微信自身的桌面通知。
+
 切换快捷键都是两键组合（macOS 用 Option ⌥ 代替 Alt）：
 
 | 快捷键 | 作用 |
 | --- | --- |
 | Alt+1 | 微信桌面 |
 | Alt+2 | 数据分析 |
-| Alt+3 | Magpie 网关 |
-| Alt+4 | DeepSeek 助手 |
+| Alt+3 | DeepSeek 助手 |
+| Alt+4 | Magpie 网关 |
 | Alt+5 | 连接与操作记录 |
 | Alt+` | 按上述顺序轮换视图 |
 | Alt+0（或 Alt+Space） | 打开或收起应用管理面板 |
@@ -127,10 +120,10 @@ Ctrl+Alt（Windows 上的 AltGr）、Alt+Shift、小键盘数字（Windows Alt �
 用 `https://用户名:密码@主机/` 打开时，页面会自动去掉地址中的账号密码重新加载，
 避免浏览器拒绝页面内请求。
 点击应用名称切换，当前应用有多个窗口时再次点击轮换；展开窗口列表可直接
-选择主窗口或子窗口。切换会最小化另一应用的窗口，不改变所选窗口的大小。
-旁边的 ↻ 按钮重启对应应用，通知开关也统一放在此面板。
-重启前保存未发送的内容；重启不会清除登录数据、数据库或配置，
-Alpha 重启时 API 会短暂不可用。此入口沿用网页登录认证，通知关闭后仍可使用。
+选择主窗口或子窗口，不改变所选窗口的大小。
+旁边的 ↻ 按钮重启微信，通知开关也统一放在此面板。
+重启前保存未发送的内容；重启不会清除登录数据、数据库或配置。
+此入口沿用网页登录认证，通知关闭后仍可使用。
 正常退出超时后才强制结束残留进程；同一应用的重启请求不会并行执行。
 
 默认 APP_SWITCHER_MODE=web，不再显示旧桌面悬浮条。设为 desktop 并重建
@@ -152,12 +145,11 @@ Alpha 重启时 API 会短暂不可用。此入口沿用网页登录认证，通
 ## 源码构建
 
 versions.lock.json 记录准确版本、平台、基础镜像 digest 和安装包校验值。
-微信 deb 默认从本仓库的 component-assets Release 下载，Alpha deb 从
-xunchahaha/alpha-releases 的 v0.2.0 Release 下载，避免地址滚动更新版本。Release 附件仅包含原版安装包及校验清单，
-不包含部署配置、账号目录或密钥。
-离线构建可提前把两个安装包分别放在 downloads/wechat.deb 和 downloads/alpha.deb。
-WECHAT_DOWNLOAD_URL / ALPHA_DOWNLOAD_URL 可覆盖下载地址，但仍须通过锁定校验值。
-两个下载目录中的文件均不会被提交到 Git。
+微信 deb 默认从本仓库的 component-assets Release 下载，避免地址滚动更新版本。
+Release 附件仅包含原版安装包及校验清单，不包含部署配置、账号目录或密钥。
+离线构建可提前把安装包放在 downloads/wechat.deb。
+WECHAT_DOWNLOAD_URL 可覆盖下载地址，但仍须通过锁定校验值。
+downloads 目录中的文件不会被提交到 Git。
 
 ~~~bash
 python3 scripts/prepare-assets.py
@@ -182,15 +174,15 @@ image.yml 在 main 推送、PR、v* 版本标签及手动触发时运行：
 发布 GHCR，无需把个人 Token 写入代码。Buildx 缓存与校验过的安装包缓存独立保存。
 发布直接推送已经通过烟雾测试的镜像，不再重新构建。
 
-首次运行无需额外配置，两个安装包均使用版本锁定文件中的 Release 附件地址。
+首次运行无需额外配置，安装包使用版本锁定文件中的 Release 附件地址。
 需要镜像下载来源时，可在仓库 Settings → Secrets and variables → Actions → Variables
-设置 ALPHA_DOWNLOAD_URL / WECHAT_DOWNLOAD_URL；手动构建也可输入 Alpha 的可信 HTTPS URL。
+设置 WECHAT_DOWNLOAD_URL。
 下载内容必须通过 versions.lock.json 的 SHA256 校验。地址缺失或版本不匹配时
 工作流会明确失败，不会静默跳过整个镜像任务。缓存只包含 downloads 安装包，
 不包含用户配置、账号数据和凭据。
 fork 的发布地址自动跟随 github.repository，不绑定某个个人账号。
 
-准备公开镜像时，应先确认 Alpha 0.2.0（闭源、许可未声明）及所含组件的分发许可，
+准备公开镜像时，应先确认所含组件的分发许可，
 保留微信与全部第三方声明，再补充稳定可访问的安装包来源。
 构建能成功并不等于已经确认所有二进制组件的再分发授权。
 
@@ -203,7 +195,3 @@ fork 的发布地址自动跟随 github.repository，不绑定某个个人账号
 在没有 systemd 的主机上，dockerd 与 tailscaled 需要手动拉起；容器使用
 restart: unless-stopped，dockerd 启动后会自动恢复。Tailscale Serve 配置保存在
 tailscaled 状态目录中，重启 tailscaled 后仍生效。
-
-## proot-apps
-
-WeChat and Alpha are not installed as proot-apps: Alpha's key helper refuses to run under proot. See [proot-apps-evaluation.md](proot-apps-evaluation.md).

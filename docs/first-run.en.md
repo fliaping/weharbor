@@ -1,33 +1,32 @@
-# First run: from WeChat login to the first message
+# First run: from WeChat login to asking the assistant
 
-Applies to WeHarbor 0.1.0 with WeChat 4.1.13.23, Alpha 0.2.0 and Selkies 2.0.
-Alpha wizard screens after the first step have not been verified in detail.
-Alpha 0.2.0 has a known Linux automatic key acquisition failure; a passing
-container smoke test does not verify key acquisition with a real account.
+Applies to WeHarbor 0.1.0 with WeChat 4.1.13.23, Selkies 2.0 and the pinned
+`fliaping/WeChatDataAnalysis` (see versions.lock.json). Button labels in the
+analysis UI may differ slightly. A passing container smoke test does not verify
+key acquisition with a real account.
 
 [中文](first-run.md)
 
-1. **Open the desktop** at `https://localhost:3001` with `CUSTOM_USER`/`PASSWORD`
-   from `.env`. WeChat and Alpha start automatically (Alpha minimized).
+1. **Open the workspace** at `https://localhost:3001` with `CUSTOM_USER`/`PASSWORD`
+   from `.env`. The left rail is WeChat / Analysis / Assistant / Magpie /
+   Connections (Alt+1–5; Option on macOS).
 2. **Log in to WeChat** by scanning the QR code (or pressing 登录 for a saved
-   account) and confirming on the phone. Automatic login clicking was removed.
-3. **Run Alpha's setup wizard**: tick "我已了解", click "连接微信", pick the
-   account and data directory `/config/Documents/xwechat_files`, let Alpha
-   acquire the database key (WeChat must stay logged in; the container has
-   SYS_PTRACE), optionally the image key, then confirm messages are visible.
-4. **Enable the HTTP API** in Alpha's settings (port 5031) and copy the token.
-   Host port 5031 maps to the in-container nginx proxy on 5032, which forwards
-   to Alpha on 127.0.0.1:5031 and rejects browser Origin headers.
-   For browser notifications, save the token to
-   `/config/.config/weharbor/alpha-api-token` (mode 600).
-5. **Connect an AI tool** with the alpha-api skill (see install-skill.md).
+   account) and confirming on the phone.
+3. **Get the database key in Analysis** (Alt+2). A verified WeFlow key for the
+   account is reused without attaching to WeChat. Otherwise start key capture
+   on the Linux source card, then log out of WeChat and back in within 120
+   seconds. The key is validated by decrypting before it is saved under
+   `/config/.local/share/weharbor/analysis`. The container needs `SYS_PTRACE`
+   (set in compose.yaml). Image keys are captured and validated the same way.
+4. **Add a model provider in Magpie** (Alt+4). Magpie redacts secrets and
+   personal data locally before model calls; models sync to the assistant
+   within about 15 seconds.
+5. **Ask the assistant** (Alt+3). It reads chats through the local MCP tools;
+   sending requires an explicit prepare and commit. External AI tools can use
+   `https://<host>/workspace/mcp` with the token in
+   `/config/.config/weharbor/workspace.token` (see [workspace.md](workspace.md)).
 
-Alpha stores its API token with Electron safeStorage; the container runs a
-password-less gnome-keyring, so the token is protected by the data volume's
-access control. Alpha 0.2.0's key helper embeds an expiry of 2026-11-15.
-
-`NATIVE_WECHAT_CAPTURE_PLATFORM_UNAVAILABLE` is tracked in upstream
-xunchahaha/alpha-releases issue #5. On October 19, 2026, the maintainer said
-it would be fixed in the next version. Adding SYS_PTRACE or privileged mode
-does not fix it. Import an existing key for the same account manually in
-Alpha, or wait for a verified upstream fix. Do not put keys in logs or Git.
+Upgrading from an image that still shipped Alpha: Alpha, its API on port 5031,
+the alpha-api skill and the Alpha token are gone. Remove `API_BIND_ADDRESS`,
+`API_PORT` and `AUTO_START_ALPHA` from `.env`. Old Alpha files in the data
+directory can be deleted manually.

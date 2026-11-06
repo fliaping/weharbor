@@ -19,7 +19,8 @@ const {matchShortcut, nextView, distanceToRect, shortcutLabel, VIEW_ORDER, NEAR_
 
 const key = (code, mods = {}) => ({code, ctrlKey: false, altKey: true, shiftKey: false, metaKey: false, ...mods});
 assert.deepEqual({...matchShortcut(key("Digit1"))}, {type: "view", view: "desktop"});
-assert.deepEqual({...matchShortcut(key("Digit3"))}, {type: "view", view: "magpie"});
+assert.deepEqual({...matchShortcut(key("Digit3"))}, {type: "view", view: "assistant"});
+assert.deepEqual({...matchShortcut(key("Digit4"))}, {type: "view", view: "magpie"});
 assert.deepEqual({...matchShortcut(key("Digit5"))}, {type: "view", view: "connections"});
 assert.equal(matchShortcut(key("Digit6")), null);
 assert.equal(matchShortcut(key("Digit9")), null);
@@ -44,7 +45,7 @@ assert.equal(matchShortcut({code: "Digit1"}), null);
 assert.equal(nextView("desktop"), "analysis");
 assert.equal(nextView(VIEW_ORDER.at(-1)), "desktop");
 assert.equal(nextView("desktop", -1), VIEW_ORDER.at(-1));
-assert.equal(shortcutLabel("assistant"), "Alt+4");
+assert.equal(shortcutLabel("assistant"), "Alt+3");
 const handle = {left: 990, right: 1000, top: 300, bottom: 352};
 assert.equal(distanceToRect(995, 320, handle), 0);
 assert.equal(distanceToRect(950, 320, handle), 40);
@@ -104,7 +105,7 @@ console.log("dock credential reload ok");
     document: {readyState: "loading", addEventListener: () => {}}, localStorage: {getItem: () => null, setItem: () => {}}};
   ctx.globalThis = ctx;
   vm.runInNewContext(fs.readFileSync(process.argv[2], "utf8"), ctx);
-  assert.equal(ctx.WeHarborDock.logic.shortcutLabel("magpie"), "⌥3");
-  assert.equal(ctx.WeHarborDock.logic.matchShortcut({code: "Digit3", key: "£", altKey: true}).view, "magpie");
+  assert.equal(ctx.WeHarborDock.logic.shortcutLabel("magpie"), "⌥4");
+  assert.equal(ctx.WeHarborDock.logic.matchShortcut({code: "Digit3", key: "£", altKey: true}).view, "assistant");
 }
 console.log("dock mac labels ok");

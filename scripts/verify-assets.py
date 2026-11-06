@@ -22,15 +22,14 @@ def verify(path, expected):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('component', choices=['wechat', 'alpha'])
+    parser.add_argument('component', choices=['wechat'])
     parser.add_argument('--lock', required=True, type=Path)
     parser.add_argument('--asset', required=True, type=Path)
     parser.add_argument('--install', action='store_true')
     args = parser.parse_args()
     component = json.loads(args.lock.read_text())[args.component]
     verify(args.asset, component['sha256'])
-    package = {'wechat': 'wechat', 'alpha': 'alpha'}[args.component]
-    label = {'wechat': 'WeChat', 'alpha': 'Alpha'}[args.component]
+    package, label = 'wechat', 'WeChat'
     for field, expected in [('Package', package), ('Version', component['version']), ('Architecture', 'amd64')]:
         actual = subprocess.check_output(['dpkg-deb', '-f', str(args.asset), field], text=True).strip()
         if actual != expected:

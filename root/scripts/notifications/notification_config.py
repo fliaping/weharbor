@@ -12,7 +12,6 @@ DEFAULT_SETTINGS = {
     "enabled": True,
     "apps": {
         "wechat": True,
-        "alpha": True,
     },
 }
 

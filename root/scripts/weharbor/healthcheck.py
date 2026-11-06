@@ -23,18 +23,6 @@ def get(url, authenticated=False):
 
 def main():
     get('http://127.0.0.1:3000/', authenticated=True)
-    if enabled('AUTO_START_ALPHA'):
-        subprocess.run(['pgrep', '-x', 'alpha'], check=True, stdout=subprocess.DEVNULL)
-        # Electron can stay alive with a blank window while its engine fails
-        # security checks and repeatedly restarts. Require the native hosts too.
-        for name in ('alpha-engine', 'alpha-security-host', 'alpha-data-host'):
-            # Linux comm truncates alpha-security-host; match the executable
-            # path instead, allowing its normal command-line arguments.
-            result = subprocess.run(
-                ['pgrep', '-f', rf'^/opt/Alpha/resources/bin/{name}( |$)'],
-                stdout=subprocess.DEVNULL)
-            if result.returncode:
-                raise ValueError(f'Alpha backend is not running: {name}')
     if enabled('AUTO_START_WECHAT'):
         subprocess.run(['pgrep', '-x', 'wechat'], check=True, stdout=subprocess.DEVNULL)
     if enabled('ENABLE_MAGPIE'):
@@ -47,22 +35,12 @@ def main():
         raise ValueError('Application/notification bridge is not healthy')
     if enabled('ENABLE_APP_SWITCHER'):
         apps = json.loads(get('http://127.0.0.1:8765/apps'))
-        if not all(name in apps for name in ('wechat', 'alpha')):
+        if 'wechat' not in apps:
             raise ValueError('Application controls are not healthy')
         if os.environ.get('APP_SWITCHER_MODE', 'web') != 'desktop':
             script = get('http://127.0.0.1:3000/weharbor-apps.js', authenticated=True)
             if b'weharbor-apps-button' not in script:
                 raise ValueError('Web application controls are not available')
-    # Alpha's API is optional on first launch. /health needs no token, so
-    # check it whenever the listener is up (the user enabled it in Alpha).
-    if enabled('AUTO_START_ALPHA'):
-        port = int(os.environ.get('ALPHA_API_PORT', '5031'))
-        try:
-            body = get(f'http://127.0.0.1:{port}/health')
-        except OSError:
-            body = None
-        if body is not None and not body.strip():
-            raise ValueError('Alpha API is not healthy')
     print('WeHarbor: healthy')
 
 

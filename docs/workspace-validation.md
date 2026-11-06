@@ -1,5 +1,7 @@
 # Workspace validation — 2026-10-20
 
+> Historical record. Alpha was later removed from WeHarbor; references to it below describe the image validated on that date.
+
 Validated on an amd64 Linux NAS with an existing WeHarbor profile. Test output
 contains counts and status only; keys, chat contents and account identities are
 not committed. The preceding baseline image was

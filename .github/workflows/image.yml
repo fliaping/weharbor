@@ -7,16 +7,12 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
-      alpha_download_url:
-        description: Trusted HTTPS URL for the original Alpha deb
-        type: string
-        required: false
       publish:
         description: Publish the tested image to this repository's GHCR package
         type: boolean
         default: false
       image_tag:
-        description: Extra image tag for a manual publish (not latest or edge), for example selkies2-alpha
+        description: Extra image tag for a manual publish (not latest or edge), for example selkies2-preview
         type: string
         required: false
 permissions:
@@ -30,7 +26,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      ALPHA_DOWNLOAD_URL: ${{ inputs.alpha_download_url || vars.ALPHA_DOWNLOAD_URL }}
       WECHAT_DOWNLOAD_URL: ${{ vars.WECHAT_DOWNLOAD_URL }}
       PROJECT_SOURCE: ${{ github.server_url }}/${{ github.repository }}
     steps:

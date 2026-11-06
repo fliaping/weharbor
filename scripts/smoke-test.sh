@@ -16,20 +16,6 @@ cleanup() {
 }
 trap cleanup EXIT
 mkdir "$test_directory/config"
-# Seed synthetic state with the permissions seen on NAS volumes. No user data.
-python3 - "$test_directory/config" <<'PY'
-import sys
-from pathlib import Path
-for relative in ['.local/share/com.alpha.guard', '.local/state/alpha']:
-    root = Path(sys.argv[1]) / relative
-    directory = root / 'weharbor-permission-fixture'
-    directory.mkdir(parents=True)
-    directory.chmod(0o705)
-    root.chmod(0o705)
-    state = directory / 'state'
-    state.write_text('preserve existing state\n')
-    state.chmod(0o644)
-PY
 # The base image hands PASSWORD to `openssl passwd`, which reads a leading "-" as an option.
 export PASSWORD="$(python3 -c 'import secrets; print("w" + secrets.token_urlsafe(24))')"
 # Chromium requires private temporary-directory modes, including under nested
@@ -76,10 +62,11 @@ def wait_for(path, predicate=lambda response, body: response.status == 200):
             pass
         time.sleep(1)
     raise SystemExit('Service did not become ready: ' + path)
-wait_for('notifications/apps', lambda r, b: all(json.loads(b)[a]['running'] and json.loads(b)[a]['windows'] for a in ['wechat','alpha']))
+wait_for('notifications/apps', lambda r, b: all(json.loads(b)[a]['running'] and json.loads(b)[a]['windows'] for a in ['wechat']))
 wait_for('analysis/api/health')
 capabilities = json.loads(wait_for('analysis/api/advanced/capabilities'))
-assert capabilities['counts'] == {'total': 79, 'available': 48}, capabilities['counts']
+assert capabilities['counts'] == {'total': 78, 'available': 47}, capabilities['counts']
+assert 'ai-assistant' not in capabilities['features']
 assert capabilities['features']['contact-search']['state'] == 'blocked'
 assert capabilities['features']['send-file']['state'] == 'available'
 assert capabilities['features']['contact-list-labels']['state'] == 'available'
@@ -103,7 +90,7 @@ for origin, expected in [('https://evil.example', 403), (os.environ['SMOKE_URL']
             assert result['path'].startswith('/config/.local/share/weharbor/uploads/')
     except urllib.error.HTTPError as error:
         assert error.code == expected, (origin, error.code, error.read())
-print('48 advanced execution paths and private streaming upload passed; no WeChat action submitted')
+print('47 advanced execution paths and private streaming upload passed; no WeChat action submitted')
 analysis = wait_for('analysis/')
 assert b'/analysis/_nuxt/' in analysis
 assert b'ui.first_use_agreement' not in analysis
@@ -211,15 +198,15 @@ with urllib.request.urlopen(urllib.request.Request(url + 'weharbor-sw.js', heade
     assert b'event.respondWith' in response.read()
 with urllib.request.urlopen(urllib.request.Request(url + 'weharbor-apps.js', headers=headers), timeout=5) as response:
     dock = response.read()
-    for marker in [b'weharbor-apps-button', b'matchShortcut', b'prefers-reduced-motion', b'weharbor-dock-shortcuts']:
+    for marker in [b'weharbor-apps-button', b'weharbor-shell', b'matchShortcut', b'prefers-reduced-motion', b'weharbor-dock-shortcuts', b'weharbor-palette']:
         assert marker in dock, marker
 with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=5) as response:
     assert re.search(rb'<script src="\./weharbor-apps\.js\?v=[0-9a-f]{12}"></script>', response.read())
 print('Browser authentication, notifications and PWA resources passed')
 with urllib.request.urlopen(urllib.request.Request(url + 'notifications/apps', headers=headers), timeout=5) as response:
     apps = json.load(response)
-    assert apps['wechat']['running'] and apps['alpha']['running'], apps
-for app in ['wechat', 'alpha']:
+    assert apps['wechat']['running'] and 'alpha' not in apps, apps
+for app in ['wechat']:
     restart_url = url + f'notifications/apps/{app}/restart'
     for extra in [{}, {'Content-Type': 'application/json', 'X-WeHarbor-Action': 'restart',
                        'Origin': 'https://evil.example'}]:
@@ -238,7 +225,7 @@ print('Authenticated application restarts and cross-origin protection passed')
 def app_status():
     with urllib.request.urlopen(urllib.request.Request(url + 'notifications/apps', headers=headers), timeout=5) as response:
         return json.load(response)
-for app in ['alpha', 'wechat']:
+for app in ['wechat']:
     for attempt in range(60):
         if app_status()[app]['windows']:
             break
@@ -256,14 +243,13 @@ for app in ['alpha', 'wechat']:
         raise SystemExit('Switch accepted cross-origin request')
     with urllib.request.urlopen(urllib.request.Request(switch_url, data=b'{}', headers=switch_headers), timeout=10) as response:
         assert json.load(response)['windowId']
-    other = 'wechat' if app == 'alpha' else 'alpha'
     for attempt in range(30):
         state = app_status()
-        if state[app]['active'] and all(w['minimized'] for w in state[other]['windows']):
+        if state[app]['active']:
             break
         time.sleep(.2)
     else:
-        raise SystemExit('Window focus/minimize did not settle: ' + app)
+        raise SystemExit('Window focus did not settle: ' + app)
     try:
         urllib.request.urlopen(urllib.request.Request(switch_url,
             data=b'{"windowId": 4294967295}', headers=switch_headers), timeout=5)
@@ -271,7 +257,7 @@ for app in ['alpha', 'wechat']:
         assert error.code == 404
     else:
         raise SystemExit('Switch accepted an unowned window')
-print('Web application switching, ownership and minimize behavior passed')
+print('Web application switching and ownership passed')
 PY
 docker exec -i "$container" python3 - <<'PY'
 import hashlib, json, stat, subprocess
@@ -334,20 +320,12 @@ identity = subprocess.run(['s6-setuidgid', 'abc', 'sudo', '-n',
     text=True, capture_output=True, check=True, timeout=20)
 assert json.loads(identity.stdout) == {'verified': False, 'error': 'SESSION_IDENTITY_UNAVAILABLE'}
 print('Fixed privileged identity helper rejects an account absent from the fresh desktop')
-for relative in ['.local/share/com.alpha.guard', '.local/state/alpha']:
-    root = Path('/config') / relative
-    directory = root / 'weharbor-permission-fixture'
-    state = directory / 'state'
-    assert stat.S_IMODE(root.stat().st_mode) == 0o700
-    assert stat.S_IMODE(directory.stat().st_mode) == 0o700
-    assert stat.S_IMODE(state.stat().st_mode) == 0o600
-    assert state.read_text() == 'preserve existing state\n'
-print('Alpha private state permissions repaired without changing contents')
 lock = json.loads(Path('/usr/share/weharbor/versions.lock.json').read_text())
 version = subprocess.check_output(['dpkg-query', '-W', '-f=${Version}', 'wechat'], text=True)
 assert version == lock['wechat']['version'], version
-alpha = subprocess.check_output(['dpkg-query', '-W', '-f=${Version}', 'alpha'], text=True)
-assert alpha == lock['alpha']['version'], alpha
+assert 'alpha' not in lock
+assert subprocess.run(['dpkg-query', '-W', 'alpha'], capture_output=True).returncode != 0, 'Alpha must not be installed'
+assert not Path('/opt/Alpha').exists() and not Path('/scripts/alpha').exists()
 magpie_ver = subprocess.check_output(['magpie', 'version'], text=True).strip()
 assert magpie_ver == 'magpie ' + lock['magpie']['version'], magpie_ver
 subprocess.run(['magpie', 'healthcheck'], check=True)
@@ -357,8 +335,6 @@ with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:3425/v1/mod
 assert 'http://127.0.0.1:3425/v1' in Path('/config/.local/share/weharbor/harness/profiles/web/cordis.patch.yml').read_text()
 assert '    preference: zh' in Path('/config/.local/share/weharbor/harness/profiles/web/cordis.patch.yml').read_text()
 assert Path('/usr/local/bin/dsh').stat().st_mode & 0o111
-subprocess.run(['dpkg', '--verify', 'alpha'], check=True)
-assert Path('/config/Documents/xwechat_files').is_symlink()
 subprocess.run(['pgrep', '-f', '^python3 /scripts/weharbor/window-layout.py$'],
                check=True, stdout=subprocess.DEVNULL)
 subprocess.run(['dpkg', '--verify', 'wechat'], check=True)
@@ -397,8 +373,7 @@ assert config.read_text().count('WeHarbor window defaults: begin') == 1
 rules = ET.parse(config).findall('.//{*}application')
 wechat = [r for r in rules if r.get('class') == 'wechat'][-1]
 assert wechat.find('{*}maximized').text == 'no'
-alpha = [r for r in rules if r.get('class') == 'alpha-desktop' and r.get('title') == 'Alpha'][-1]
-assert alpha.find('{*}iconic').text == 'yes'
+assert not [r for r in rules if r.get('class') == 'alpha-desktop']
 assert Path('/config/.config/weharbor/wechat-dpi').read_text().strip() == '144'
 clients = []
 for executable in Path('/proc').glob('[0-9]*/exe'):
