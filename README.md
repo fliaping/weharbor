@@ -1,53 +1,81 @@
 # WeHarbor｜微港
 
-把微信桌面、聊天数据 API 和实时消息通知装进一个容器。
+[![GitHub stars](https://img.shields.io/github/stars/fliaping/weharbor?style=social)](https://github.com/fliaping/weharbor/stargazers)
+[![GHCR](https://img.shields.io/badge/GHCR-weharbor-0b6e99?logo=docker&logoColor=white)](https://github.com/fliaping/weharbor/pkgs/container/weharbor)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-linux%2Famd64-lightgrey)](https://github.com/fliaping/weharbor)
 
-WeHarbor 是面向个人自托管的微信服务集成项目。它直接基于 LinuxServer.io 的
-Selkies 2.0 基础镜像（Debian trixie），把官方 Linux 微信和 Alpha 放在同一个
-浏览器桌面里，提供窗口切换、浏览器通知，以及 Alpha 的 HTTP API / MCP / SSE
-消息推送。用户数据保存在一个 /config 卷中。
+**把官方 Linux 微信、数据分析、Magpie 网关和 AI 助手放进同一个浏览器工作区。**
+One browser workspace for official Linux WeChat, chat analytics, Magpie gateway, and an AI assistant.
 
-[English](docs/README.en.md) · [首次使用教程](docs/first-run.md) · [API 接入](docs/api.md) ·
-[升级与迁移](docs/operations.md) · [AI skill 安装](docs/install-skill.md) ·
-[安装为桌面应用](docs/pwa.md) ·
-[组件许可](THIRD_PARTY_NOTICES.md)
+[English](docs/README.en.md) · [首次使用](docs/first-run.md) · [API](docs/api.md) · [运维](docs/operations.md) · [PWA](docs/pwa.md) · [工作区](docs/workspace.md)
 
-集成工作区开发版：边缘挂件可全屏切换桌面、Linux 聊天分析、Magpie 模型网关、DeepSeek
-Harness 和连接设置。支持已有 WeFlow 密钥、数据库/WAL 与图片解密、
-独立 MCP/Skill，以及带回执的桌面 Action。内置 Magpie 网页模式与本地可逆脱敏网关
-（默认开启密钥与个人敏感信息脱敏），DeepSeek Harness（dsh 助手）默认接入 Magpie
-提供的模型服务，同时加载微信工具和分析工作台工具，可读取数据、按授权发送消息、
-管理自动化任务及连续刷新保存朋友圈。
-分析工作台开放全部功能入口，并分别标明已实现、待连接与尚未实现。配置和限制见
-[工作区说明](docs/workspace.md)。
+<p align="center">
+  <img src="docs/assets/workspace-desktop-dark.png" alt="WeHarbor unified workspace — WeChat stream with shell chrome (dark)" width="920" />
+</p>
+
+## 为什么是 WeHarbor / Why
+
+| | 中文 | English |
+| --- | --- | --- |
+| 真实微信 | 官方 deb，不是第三方协议客户端 | Official WeChat deb, not a third-party protocol client |
+| 一体工作区 | 左侧导航 + 微信主画面 + 可并排助手/分析/Magpie | Left rail, WeChat main pane, split side apps |
+| 数据自持 | 单容器、单 `/config` 卷，可私有部署 | Single container, one `/config` volume, self-hosted |
+| 本地脱敏 | Magpie 网关默认脱敏后再给模型 | Magpie gateway redacts before model calls |
+
+## 功能一览 / Features
+
+- **统一工作区**：微信 Selkies 画面为主窗格；助手、分析、Magpie、连接可并排或专注全屏。
+- **设计系统**：浅色/深色、中文优先字体栈、状态芯片、命令面板（Ctrl/⌘+K）、Alt+1–5 快捷键。
+- **官方微信 + Alpha**：窗口切换、浏览器通知、HTTP API / MCP / SSE。
+- **分析与助手**：WeFlow 密钥复用、数据库/WAL/图片解密；DeepSeek Harness 经 Magpie 本地网关。
+- **PWA**：可安装为独立窗口；手机底部标签栏适配。
+
+## 三步启动 / Quick start
+
+需要 Linux amd64、Docker Engine 与 Compose v2：
+
+```bash
+git clone https://github.com/fliaping/weharbor.git && cd weharbor
+./scripts/init.sh && ./scripts/build.sh
+docker compose up -d
+```
+
+打开 `https://localhost:3001`，使用 `.env` 中的 `CUSTOM_USER` / `PASSWORD` 登录。
+首次 HTTPS 为自签名证书。默认只绑定本机；跨机器请用 Tailscale Serve 或 HTTPS 反向代理（需 WebSocket）。
+
+预构建镜像：`ghcr.io/fliaping/weharbor:edge`（main）或功能标签如 `magpie-gateway`。
+
+## 安全与隐私 / Security
+
+- 登录密码与 API Token 保存在本机 `.env` / `/config`，**不要**提交到 Git。
+- Magpie 默认对密钥与个人敏感字段做**本地可逆脱敏**后再请求模型。
+- 不建议将 3001 直接暴露公网；优先 Tailscale 或自有反向代理。
+- Alpha 为闭源未签名发行版，许可证未声明；详见 [组件许可](THIRD_PARTY_NOTICES.md)。
+
+## 架构 / Architecture
+
+```mermaid
+flowchart LR
+  Browser["Browser / PWA"] --> Shell["Unified workspace shell"]
+  Shell --> Stream["Selkies · WeChat desktop"]
+  Shell --> Side["Side panel"]
+  Side --> Analysis["Analysis"]
+  Side --> Magpie["Magpie gateway"]
+  Side --> DSH["DeepSeek assistant"]
+  Side --> Conn["Connections / MCP"]
+  Magpie --> Models["Upstream models"]
+  Analysis --> Data["/config WeChat DBs"]
+  Stream --> WeChat["Official WeChat + Alpha"]
+```
 
 ## 当前状态
 
-源码版本 0.1.0，仓库为 [fliaping/weharbor](https://github.com/fliaping/weharbor)。
-当前组合：WeChat 4.1.13.23、Alpha 0.2.0、Selkies 2.0.0
-（ghcr.io/linuxserver/baseimage-selkies:debiantrixie，按 digest 锁定）。
-目前仅支持 linux/amd64。
+源码版本 0.1.0，仓库 [fliaping/weharbor](https://github.com/fliaping/weharbor)。
+组合：WeChat 4.1.13.23、Alpha 0.2.0、Selkies 2.0.0（`ghcr.io/linuxserver/baseimage-selkies:debiantrixie`，按 digest 锁定）。仅 `linux/amd64`。
 
-> 预构建镜像：ghcr.io/fliaping/weharbor:edge（main 分支）。
-> Alpha 是闭源、未签名的二进制发行版，许可证未声明；其密钥助手内置
-> 2026-11-15 的有效期，需要随上游更新。详见 [组件许可](THIRD_PARTY_NOTICES.md)。
+> Alpha 密钥助手内置 2026-11-15 有效期，需随上游更新。
 
-微信安装包从本仓库的 component-assets Release 下载，Alpha 安装包从
-xunchahaha/alpha-releases 的 v0.2.0 Release 下载；构建时都会校验锁定的 SHA256。
-也可通过 WECHAT_DOWNLOAD_URL / ALPHA_DOWNLOAD_URL 覆盖地址，校验值保持固定。
-
-## 能力
-
-- 在浏览器里使用官方 Linux 微信与 Alpha（Selkies 2.0，WebSocket 传输，支持剪贴板）。
-- 网页贴边应用条，鼠标靠近展开为小圆球，可拖动、切换微信和 Alpha、选择窗口、重启应用及管理通知；
-  Alt+1–5 切换视图、Alt+` 轮换、Alt+0 打开面板（macOS 用 Option）（见 [运维说明](docs/operations.md#网页应用管理)）。
-- Alpha 默认最小化，微信默认获得焦点；登录后只自动最大化微信主窗口一次。
-- 将聊天推送与桌面通知转发为浏览器原生通知。
-- 支持 PWA 安装，以独立窗口从电脑桌面或手机主屏幕打开。
-- 通过 Alpha 查询会话、消息、联系人与群成员，订阅 SSE 消息事件，或接入 MCP。
-- 单容器、单数据卷；微信和 Alpha 均以原版 deb 安装，不修改应用文件。
-
-首次使用仍需要手机扫码登录微信，并在 Alpha 向导中完成账号与密钥配置。
 
 ## 本地构建与启动
 

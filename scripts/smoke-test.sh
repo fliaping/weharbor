@@ -211,7 +211,7 @@ with urllib.request.urlopen(urllib.request.Request(url + 'weharbor-sw.js', heade
     assert b'event.respondWith' in response.read()
 with urllib.request.urlopen(urllib.request.Request(url + 'weharbor-apps.js', headers=headers), timeout=5) as response:
     dock = response.read()
-    for marker in [b'weharbor-apps-button', b'matchShortcut', b'prefers-reduced-motion', b'weharbor-dock-shortcuts']:
+    for marker in [b'weharbor-apps-button', b'weharbor-shell', b'matchShortcut', b'prefers-reduced-motion', b'weharbor-dock-shortcuts', b'weharbor-palette']:
         assert marker in dock, marker
 with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=5) as response:
     assert re.search(rb'<script src="\./weharbor-apps\.js\?v=[0-9a-f]{12}"></script>', response.read())
