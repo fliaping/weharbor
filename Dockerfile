@@ -39,13 +39,12 @@ ARG PROJECT_SOURCE
 ARG PROJECT_REVISION
 ARG APT_MIRROR
 LABEL org.opencontainers.image.title="WeHarbor" \
-      org.opencontainers.image.description="Self-hosted WeChat desktop, Alpha data APIs and message notifications in one container" \
+      org.opencontainers.image.description="Self-hosted WeChat desktop with chat analysis and an AI assistant workspace in one container" \
       org.opencontainers.image.version="${PROJECT_VERSION}" \
       org.opencontainers.image.source="${PROJECT_SOURCE}" \
       org.opencontainers.image.revision="${PROJECT_REVISION}"
 
-# Desktop integration packages that wechat-selkies used to provide, plus the
-# Secret Service Alpha needs for Electron safeStorage.
+# Desktop integration packages that wechat-selkies used to provide.
 RUN test "${TARGETARCH:-amd64}" = amd64 \
     && sed -i -e '/^deb-src /d' \
         -e 's#http://security.debian.org/debian-security/*#http://deb.debian.org/debian-security#' \
@@ -56,7 +55,7 @@ RUN test "${TARGETARCH:-amd64}" = amd64 \
     && echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-weharbor-retries \
     && apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        dbus-x11 gnome-keyring libsecret-1-0 inotify-tools stalonetray \
+        dbus-x11 inotify-tools stalonetray \
         python3-dbus python3-xlib python3-gi gir1.2-atspi-2.0 at-spi2-core \
         python3-venv python3-dev build-essential gdb sudo \
         tesseract-ocr tesseract-ocr-chi-sim \
@@ -73,15 +72,10 @@ RUN /usr/bin/python3 -m venv --system-site-packages /opt/weharbor/python \
 COPY versions.lock.json /usr/share/weharbor/versions.lock.json
 COPY scripts/verify-assets.py /tmp/verify-assets.py
 COPY downloads/wechat.deb /tmp/wechat.deb
-COPY downloads/alpha.deb /tmp/alpha.deb
 RUN apt-get update \
     && python3 /tmp/verify-assets.py wechat \
         --lock /usr/share/weharbor/versions.lock.json --asset /tmp/wechat.deb --install \
-    && python3 /tmp/verify-assets.py alpha \
-        --lock /usr/share/weharbor/versions.lock.json --asset /tmp/alpha.deb --install \
-    && rm -rf /var/lib/apt/lists/* /tmp/wechat.deb /tmp/alpha.deb /tmp/verify-assets.py \
-    && icon="$(find /usr/share/icons/hicolor -name alpha.png | sort -V | tail -1)" \
-    && cp "$icon" /usr/share/pixmaps/alpha.png \
+    && rm -rf /var/lib/apt/lists/* /tmp/wechat.deb /tmp/verify-assets.py \
     && cp /usr/share/icons/hicolor/128x128/apps/wechat.png /usr/share/selkies/www/icon.png
 
 COPY --from=integration-files /integration/ /
@@ -92,7 +86,6 @@ RUN test -f /defaults/default.conf \
     && sed -i '\|location SUBFOLDERapi {|i\  include /defaults/notification-proxy.conf;' /defaults/default.conf \
     && grep -q notification-proxy.conf /defaults/default.conf \
     && sed -i '\|location SUBFOLDERapi {|i\  include /defaults/workspace-proxy.conf;' /defaults/default.conf \
-    && cat /defaults/alpha-api-proxy.conf >> /defaults/default.conf \
     && sed -i 's#</body>#<script src="./browser-notifications.js"></script></body>#' \
         /usr/share/selkies/selkies-dashboard/index.html \
     && python3 /scripts/weharbor/install-web.py \
@@ -104,7 +97,7 @@ RUN test -f /defaults/default.conf \
         /etc/s6-overlay/s6-rc.d/init-weharbor-profile/run \
         /scripts/app-switcher/app-switcher.py \
         /scripts/notifications/*.sh /scripts/notifications/*.py \
-        /scripts/alpha/*.sh /scripts/wechat/*.sh /scripts/weharbor/* \
+        /scripts/wechat/*.sh /scripts/weharbor/* \
         /scripts/workspace/*.sh /etc/s6-overlay/s6-rc.d/svc-analysis/run \
         /etc/s6-overlay/s6-rc.d/svc-workspace/run /etc/s6-overlay/s6-rc.d/svc-harness/run \
         /etc/s6-overlay/s6-rc.d/svc-magpie/run \
@@ -118,9 +111,6 @@ ENV TITLE="WeHarbor｜微港" \
     TZ="Asia/Shanghai" \
     LC_ALL="zh_CN.UTF-8" \
     AUTO_START_WECHAT="true" \
-    AUTO_START_ALPHA="false" \
-    ALPHA_API_PORT="5031" \
-    ALPHA_API_PROXY_PORT="5032" \
     ENABLE_APP_SWITCHER="true" \
     APP_SWITCHER_MODE="web" \
     ENABLE_WINDOW_DEFAULTS="true" \

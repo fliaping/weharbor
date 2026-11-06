@@ -1,5 +1,5 @@
 #!/lsiopy/bin/python3
-"""Tiny X11 task switcher for the WeChat + Alpha Selkies desktop.
+"""Tiny X11 task switcher for the WeChat Selkies desktop.
 
 This intentionally uses only python-xlib, which is already present in the
 upstream image. It is a draggable floating window, not a desktop panel.
@@ -29,7 +29,7 @@ BUTTON_GAP = 8
 NOTIFICATION_BUTTON_WIDTH = 28
 NOTIFICATION_BUTTON_GAP = 4
 NOTIFICATION_MENU_WIDTH = 142
-NOTIFICATION_MENU_HEIGHT = 92
+NOTIFICATION_MENU_HEIGHT = 64
 NOTIFICATION_MENU_ROW_HEIGHT = 28
 NOTIFICATION_MENU_TIMEOUT = 10
 CONTEXT_MENU_WIDTH = 320
@@ -55,14 +55,6 @@ APPS = (
         "process_names": {"wechat", "wechatappex"},
         "executable_prefixes": ("/usr/bin/wechat", "/opt/wechat/"),
         "command": ["/scripts/wechat/wechat-start.sh"],
-    },
-    {
-        "label": "Alpha",
-        "classes": {"alpha-desktop", "alpha"},
-        "primary_classes": {"alpha-desktop"},
-        "process_names": {"alpha"},
-        "executable_prefixes": ("/opt/Alpha/",),
-        "command": ["/scripts/alpha/alpha-start.sh"],
     },
 )
 
@@ -1271,7 +1263,6 @@ class AppSwitcher:
         rows = (
             ("All", settings["enabled"]),
             ("WeChat", settings["apps"]["wechat"]),
-            ("Alpha", settings["apps"]["alpha"]),
         )
         self.notification_menu_buffer.fill_rectangle(
             self.panel_gc,
@@ -1416,7 +1407,7 @@ class AppSwitcher:
         if not 4 <= x < NOTIFICATION_MENU_WIDTH - 4:
             return None
         row = (y - 4) // NOTIFICATION_MENU_ROW_HEIGHT
-        if 0 <= row < 3:
+        if 0 <= row < 2:
             return int(row)
         return None
 
@@ -1438,8 +1429,6 @@ class AppSwitcher:
             settings["enabled"] = not settings["enabled"]
         elif row == 1:
             settings["apps"]["wechat"] = not settings["apps"]["wechat"]
-        elif row == 2:
-            settings["apps"]["alpha"] = not settings["apps"]["alpha"]
         save_settings(settings)
         self.notification_menu_last_interaction = time.monotonic()
         self.last_visual_state = None

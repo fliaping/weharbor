@@ -22,25 +22,22 @@ class WindowControlTests(unittest.TestCase):
 
     def windows(self, active=11):
         return {'wechat': [{'id': 11, 'active': active == 11, 'minimized': False},
-                           {'id': 12, 'active': active == 12, 'minimized': False}],
-                'alpha': [{'id': 21, 'active': active == 21, 'minimized': False},
-                           {'id': 22, 'active': False, 'minimized': True}]}
+                           {'id': 12, 'active': active == 12, 'minimized': False}]}
 
-    def test_active_app_cycles_and_only_hides_other_app(self):
+    def test_active_app_cycles_without_touching_other_windows(self):
         desktop = self.desktop(self.windows())
         self.assertEqual(desktop.activate('wechat'), 12)
         self.assertEqual([call.args for call in desktop.send.call_args_list],
-                         [(21, 'WM_CHANGE_STATE', [3, 0, 0, 0, 0]),
-                          (12, '_NET_ACTIVE_WINDOW', [2, 0, 0, 0, 0])])
+                         [(12, '_NET_ACTIVE_WINDOW', [2, 0, 0, 0, 0])])
         self.assertEqual(desktop.remembered['wechat'], 12)
         desktop.connection.sync.assert_called_once()
 
     def test_return_to_remembered_window(self):
-        desktop = self.desktop(self.windows(active=21), {'wechat': 12})
+        desktop = self.desktop(self.windows(active=None), {'wechat': 12})
         self.assertEqual(desktop.activate('wechat'), 12)
 
     def test_closed_remembered_window_falls_back(self):
-        desktop = self.desktop(self.windows(active=21), {'wechat': 999})
+        desktop = self.desktop(self.windows(active=None), {'wechat': 999})
         self.assertEqual(desktop.activate('wechat'), 11)
 
     def test_foreign_or_closed_window_never_changes_desktop(self):
@@ -55,8 +52,8 @@ class WindowControlTests(unittest.TestCase):
         self.assertEqual(desktop.activate('wechat', 11), 11)
         self.assertEqual(desktop.send.call_args.args[1], '_NET_ACTIVE_WINDOW')
 
-    def test_no_window_does_not_hide_other_app(self):
-        desktop = self.desktop({'wechat': [], 'alpha': self.windows()['alpha']})
+    def test_no_window_changes_nothing(self):
+        desktop = self.desktop({'wechat': []})
         self.assertIsNone(desktop.activate('wechat'))
         desktop.send.assert_not_called()
 
@@ -69,7 +66,7 @@ class WindowControlTests(unittest.TestCase):
                                (33, 101, ['_NET_WM_WINDOW_TYPE_DOCK']), (44, 201, [])]:
             window = Mock()
             window.get_geometry.return_value = types.SimpleNamespace(width=600, height=400)
-            window.get_wm_class.return_value = ('wechat',) if pid == 101 else ('alpha-desktop',)
+            window.get_wm_class.return_value = ('wechat',) if pid == 101 else ('other-app',)
             window.get_wm_name.return_value = 'Window'
             windows[wid] = window
             properties[wid] = {'_NET_WM_PID': [pid], '_NET_WM_WINDOW_TYPE': kind,
@@ -81,8 +78,8 @@ class WindowControlTests(unittest.TestCase):
         connection.create_resource_object.side_effect = lambda _kind, wid: windows[wid]
         desktop = control.Desktop(connection, types.SimpleNamespace(AnyPropertyType=0),
                                   types.SimpleNamespace(XError=RuntimeError), Mock(),
-                                  lambda app: {101: ('1', True)} if app == 'wechat' else {201: ('2', True)}, {})
+                                  lambda app: {101: ('1', True)} if app == 'wechat' else {}, {})
         result = desktop.snapshot()
         self.assertEqual([w['id'] for w in result['wechat']], [11])
-        self.assertEqual([w['id'] for w in result['alpha']], [44])
+        self.assertEqual(list(result), ['wechat'], 'windows of other processes are never listed')
         self.assertTrue(result['wechat'][0]['active'])

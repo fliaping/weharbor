@@ -11,10 +11,10 @@
     "sha256": "b7d0f8d53e9f648bc2c77a6096a04100d008f2d9f0d3988a2a4859b5992aca0a"
   },
   "analysis": {
-    "version": "61b31433d18bb638b5f51dbdeb1a461c16d84cfe",
+    "version": "9ee94c9e2f3d4819e41e12d0c3003bb42358cb97",
     "filename": "analysis.tar.gz",
-    "url": "https://codeload.github.com/fliaping/WeChatDataAnalysis/tar.gz/61b31433d18bb638b5f51dbdeb1a461c16d84cfe",
-    "sha256": "602c24c41c7ebefa15e626861efaa90dd4dc956a68584cafb0561b507eee407d"
+    "url": "https://codeload.github.com/fliaping/WeChatDataAnalysis/tar.gz/9ee94c9e2f3d4819e41e12d0c3003bb42358cb97",
+    "sha256": "e01fab41e0101e3d461f11a961e8b6c925b3d3ca2ba406559c19c081cbdf150e"
   },
   "node": {
     "version": "24.16.0",
@@ -42,13 +42,6 @@
   "selkies": {
     "version": "2.0.0",
     "note": "bundled by the LinuxServer.io baseimage-selkies debiantrixie image"
-  },
-  "alpha": {
-    "version": "0.2.0",
-    "filename": "alpha.deb",
-    "original_filename": "Alpha-0.2.0-x64.deb",
-    "url": "https://github.com/xunchahaha/alpha-releases/releases/download/v0.2.0/Alpha-0.2.0-x64.deb",
-    "sha256": "9d79a56b88981c496818d93600698d11f8e21d759381c66c3fec3a10b38980d6"
   },
   "magpie": {
     "version": "0.1.1734",

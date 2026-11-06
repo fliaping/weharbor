@@ -92,7 +92,7 @@ find it on the normal PATH. The Harness UI language is seeded once to Chinese
 Settings → Language stores the choice; the browser only falls back to its own
 language while that setting cannot be loaded); changing it in Settings is kept
 afterwards. WeHarbor
-does not copy Alpha/WeFlow credentials into Harness. Its state is
+does not copy WeFlow or analysis credentials into Harness. Its state is
 `/config/.local/share/weharbor/harness`.
 The loopback proxy exchanges DSH's process-scoped launch token on the server
 and scopes its signed HttpOnly cookie to `/assistant/`. The token is redacted
@@ -178,7 +178,7 @@ self-message. Unverifiable or interrupted submissions remain uncertain and are
 never retried automatically. Unsupported accessibility layouts fail explicitly.
 These paths have synthetic driver and receipt tests; actual WeChat layouts and
 attachment transformations still require validation on an authorized account.
-The matching analysis workbench has 48 / 79 code execution paths. All 79 entries
+The matching analysis workbench has 47 / 78 code execution paths. All 78 entries
 are unlocked; each shows availability, missing connection or missing implementation
 without a premium interception popup. Onboarding
 can include mark-read as its first explicitly configured step to navigate to
@@ -212,5 +212,5 @@ The output directory must not already exist. Packaging excludes credentials,
 profiles, generated frontend output and dependencies. It verifies the pinned
 vendor assets, records the analysis source checksum, and changes only the
 generated context's analysis lock entry. The repository's canonical lock and
-upstream WeChat/Alpha applications remain unchanged. Keep the previous image
+upstream WeChat application remains unchanged. Keep the previous image
 and profile backup available until instance validation passes.

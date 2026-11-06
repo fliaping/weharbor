@@ -30,7 +30,7 @@ def configure_openbox(config=CONFIG):
     groups = root.findall(tag('applications'))
     group = groups[-1] if groups else ET.SubElement(root, tag('applications'))
     # Replace only our marked block. Keep unrelated rules, bindings and
-    # desktop preferences, including user-defined WeChat/Alpha rules.
+    # desktop preferences, including user-defined WeChat rules.
     for existing in groups:
         managed = False
         for rule in list(existing):
@@ -46,11 +46,6 @@ def configure_openbox(config=CONFIG):
     wechat = ET.SubElement(group, tag('application'), {'class': 'wechat'})
     for name, value in [('focus', 'yes'), ('maximized', 'no')]:
         ET.SubElement(wechat, tag(name)).text = value
-    # Restrict to the main Alpha window; leave settings and dialogs usable.
-    alpha = ET.SubElement(group, tag('application'),
-                          {'class': 'alpha-desktop', 'title': 'Alpha', 'type': 'normal'})
-    ET.SubElement(alpha, tag('focus')).text = 'no'
-    ET.SubElement(alpha, tag('iconic')).text = 'yes'
     group.append(ET.Comment(RULE_END))
     data = ET.tostring(root, encoding='utf-8', xml_declaration=True)
     temporary = config.with_suffix('.xml.weharbor-pending')
@@ -66,7 +61,6 @@ class Layout:
         self.d = display.Display()
         self.root = self.d.screen().root
         self.states = {}
-        self.focus_at = None
         self.main_windows = {}
 
     def atom(self, name):
@@ -138,25 +132,15 @@ class Layout:
         self.main_windows = {pid: wid for pid, wid in self.main_windows.items()
                              if wid in live}
         now = time.monotonic()
-        wechat = []
         for wid in clients:
             window = self.d.create_resource_object('window', wid)
             try:
                 if not self.normal(window):
                     continue
                 classes = tuple((x or '').lower() for x in (window.get_wm_class() or ()))
-                state = self.states.setdefault(wid, {'seen': now, 'minimized': False,
-                                                     'focused': False, 'maximized': False})
-                if 'alpha-desktop' in classes:
-                    title = self.property(window, '_NET_WM_NAME')
-                    name = title.value.decode('utf-8', errors='replace') if title else window.get_wm_name()
-                    if name == 'Alpha' and not state['minimized']:
-                        self.send(window, 'WM_CHANGE_STATE', [Xutil.IconicState, 0, 0, 0, 0])
-                        state['minimized'] = True
-                        self.focus_at = now + 0.3
-                        print('Alpha initial window minimized', flush=True)
-                elif 'wechat' in classes:
-                    wechat.append(window)
+                state = self.states.setdefault(wid, {'seen': now, 'focused': False,
+                                                     'maximized': False})
+                if 'wechat' in classes:
                     if not state['focused']:
                         self.activate(window)
                         state['focused'] = True
@@ -168,10 +152,6 @@ class Layout:
                         print('WeChat resizable main window maximized', flush=True)
             except (error.BadWindow, error.BadDrawable):
                 continue
-        if self.focus_at is not None and now >= self.focus_at:
-            if wechat:
-                self.activate(wechat[-1])
-            self.focus_at = None
         self.states = {wid: state for wid, state in self.states.items() if wid in live}
         self.d.sync()
 

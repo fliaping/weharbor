@@ -10,9 +10,6 @@ from urllib.parse import urlsplit
 APPS = {
     'wechat': {'executable': '/opt/wechat/wechat', 'prefix': '/opt/wechat/',
                'command': ['/usr/bin/wechat']},
-    'alpha': {'executable': '/opt/Alpha/alpha', 'prefix': '/opt/Alpha/',
-               'command': ['/opt/Alpha/alpha', '--no-sandbox',
-                          '--password-store=gnome-libsecret']},
 }
 
 
@@ -79,7 +76,7 @@ class AppController:
 
     def launch(self, app):
         env = os.environ.copy()
-        for key in ('APPDIR', 'APPIMAGE', 'ELECTRON_RUN_AS_NODE', 'ELECTRON_NO_ATTACH_CONSOLE'):
+        for key in ('APPDIR', 'APPIMAGE'):
             env.pop(key, None)
         log_dir = Path(env.get('HOME', '/config')) / '.local/log'
         log_dir.mkdir(parents=True, exist_ok=True)

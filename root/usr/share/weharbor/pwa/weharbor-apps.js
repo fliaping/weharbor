@@ -554,30 +554,6 @@ html[data-weharbor-theme=dark] #weharbor-apps .wh-seg input:checked + span{backg
       setTimeout(fire, 900);
     };
 
-    // WeChatDataAnalysis ships its own "AI 助手" page that embeds the same Harness
-    // assistant. In the workspace the assistant is its own window, so hide the
-    // analysis app's entry points and send any remaining /ai navigation there.
-    const ANALYSIS_AI_CSS = '[aria-label="AI 助手"],a[href$="/analysis/ai"],a[href$="/analysis/ai/"]{display:none!important}';
-    const adaptAnalysis = (frame, attempt = 0) => {
-      let doc, win;
-      try { doc = frame.contentDocument; win = frame.contentWindow; } catch { return; }
-      if (!doc || !win) return;
-      if (!doc.getElementById('weharbor-analysis-adapt')) {
-        const css = doc.createElement('style');
-        css.id = 'weharbor-analysis-adapt'; css.textContent = ANALYSIS_AI_CSS;
-        (doc.head || doc.documentElement).appendChild(css);
-      }
-      const isAi = (path) => /\/ai\/?$/.test(String(path || '').split(/[?#]/)[0]);
-      const toAssistant = () => setTimeout(() => showView('assistant'), 0);
-      const router = doc.getElementById('__nuxt')?.__vue_app__?.config?.globalProperties?.$router;
-      if (router && !router.__weharborAi) {
-        router.__weharborAi = true;
-        router.beforeEach((to) => (isAi(to.path) ? (toAssistant(), false) : true));
-        if (isAi(router.currentRoute?.value?.path)) { router.replace('/'); toAssistant(); }
-      } else if (!router && attempt < 20) {
-        setTimeout(() => adaptAnalysis(frame, attempt + 1), 250); // Nuxt may still be mounting
-      }
-    };
     const sideFrame = () => frames.querySelector('[data-frame="' + layout.side + '"]');
     const renderFrameState = () => {
       const frame = layout.mode === 'desktop' ? null : sideFrame();
@@ -599,7 +575,6 @@ html[data-weharbor-theme=dark] #weharbor-apps .wh-seg input:checked + span{backg
           // Ignore the synchronous about:blank load some engines fire on insertion.
           try { if (frame.contentWindow.location.href === 'about:blank') return; } catch {}
           try { hookKeys(frame.contentWindow); } catch {}
-          if (view === 'analysis') adaptAnalysis(frame);
           frame.dataset.loaded = '1';
           delete frame.dataset.failed;
           renderFrameState();

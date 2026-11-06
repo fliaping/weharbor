@@ -10,7 +10,6 @@ scripts/*
 !root/**
 !downloads/
 downloads/*
-!downloads/alpha.deb
 !downloads/wechat.deb
 !downloads/analysis.tar.gz
 !downloads/node.tar.xz
