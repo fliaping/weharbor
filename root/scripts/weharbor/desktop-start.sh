@@ -5,6 +5,10 @@
 # A stale PID file from a previous container run stops dbus from starting.
 rm -f /run/dbus/pid 2>/dev/null || true
 
+# Match the unified shell canvas so a logged-out WeChat card sits on an intentional
+# desktop rather than a raw black void.
+xsetroot -solid '#0b1220' 2>/dev/null || true
+
 # Let docked tray windows overlap application windows instead of reserving space.
 rc="${HOME}/.config/openbox/rc.xml"
 mkdir -p "$(dirname "${rc}")"

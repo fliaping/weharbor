@@ -71,6 +71,22 @@ if not patch_text or patch_text == "[]":
 
 # Chinese dsh UI by default (Settings → General → Language still overrides). Seeded once,
 # so a later choice or removal by the user is kept.
+# Point workspace-controller at /config/Documents so dsh can create its
+# default workspace without calling the host xdg-user-dir binary.
+docs_marker = dsh_home / ".weharbor-documents-seeded"
+if not docs_marker.exists():
+    text = patch_path.read_text() if patch_path.exists() else ""
+    if "documentsDirectory:" not in text:
+        block = (
+            "- id: workspace-controller\n"
+            '  name: "@deepseek-ai/dsh-api-workspace-controller"\n'
+            "  config:\n"
+            "    documentsDirectory: /config/Documents\n"
+        )
+        text = block if text.strip() in ("", "[]") else text.rstrip("\n") + "\n" + block
+        patch_path.write_text(text)
+    docs_marker.write_text("")
+
 locale_marker = dsh_home / ".weharbor-locale-seeded"
 if not locale_marker.exists():
     text = patch_path.read_text() if patch_path.exists() else ""

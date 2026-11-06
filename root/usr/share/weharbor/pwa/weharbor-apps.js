@@ -115,18 +115,37 @@ html[data-weharbor-theme=dark]{
 html.weharbor-unified, html.weharbor-unified body{height:100%;margin:0;overflow:hidden;background:var(--wh-bg);font-family:var(--wh-font);color:var(--wh-ink)}
 html.weharbor-unified #app{
   position:fixed!important;left:var(--wh-rail)!important;top:var(--wh-top)!important;right:var(--wh-side)!important;bottom:var(--wh-bottom)!important;
-  width:auto!important;height:auto!important;overflow:hidden;z-index:1;background:#000;
+  width:auto!important;height:auto!important;overflow:hidden;z-index:1;background:#0b1220;
+  display:flex!important;align-items:stretch;justify-content:stretch;border-radius:0;
 }
-html.weharbor-unified #root,html.weharbor-unified #dashboard-root,html.weharbor-unified #touch-gamepad-host,html.weharbor-unified #browser-notification-permission{
+html.weharbor-unified #app .video-container,
+html.weharbor-unified #app #videoStream,
+html.weharbor-unified #app #videoCanvas,
+html.weharbor-unified #app #videoWorkerCanvas,
+html.weharbor-unified #app #overlayInput{
+  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;
+  object-fit:fill!important;border-radius:0!important;margin:0!important;
+}
+/* Hide leftover Selkies chrome: the notification CTA was a full-pane translucent
+   rounded button that covered the rail; dashboard overlays are replaced by our shell. */
+html.weharbor-unified #browser-notification-permission,
+html.weharbor-unified #playButton,
+html.weharbor-unified .notification-container,
+html.weharbor-unified #status-display{display:none!important}
+html.weharbor-unified #root,
+html.weharbor-unified #dashboard-root,
+html.weharbor-unified #touch-gamepad-host{
   position:fixed!important;left:var(--wh-rail)!important;top:var(--wh-top)!important;right:var(--wh-side)!important;bottom:var(--wh-bottom)!important;
-  width:auto!important;pointer-events:none;z-index:2;
+  width:auto!important;height:auto!important;pointer-events:none!important;z-index:2;opacity:0!important;
 }
-html.weharbor-unified #dashboard-root > *, html.weharbor-unified #browser-notification-permission{pointer-events:auto}
-html.weharbor-unified.weharbor-focus #app,html.weharbor-unified.weharbor-focus #root,html.weharbor-unified.weharbor-focus #dashboard-root,html.weharbor-unified.weharbor-focus #touch-gamepad-host{visibility:hidden}
+html.weharbor-unified.weharbor-focus #app,
+html.weharbor-unified.weharbor-focus #root,
+html.weharbor-unified.weharbor-focus #dashboard-root,
+html.weharbor-unified.weharbor-focus #touch-gamepad-host{visibility:hidden}
 #weharbor-shell{position:fixed;inset:0;z-index:2147482900;pointer-events:none;font:13px/1.45 var(--wh-font);color:var(--wh-ink)}
 #weharbor-shell *{box-sizing:border-box}
 #weharbor-shell .wh-chrome{pointer-events:auto}
-#weharbor-rail{position:absolute;left:0;top:0;bottom:var(--wh-bottom);width:var(--wh-rail);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;background:var(--wh-surface);border-right:1px solid var(--wh-line);z-index:3}
+#weharbor-rail{position:absolute;left:0;top:0;bottom:var(--wh-bottom);width:var(--wh-rail);display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0 10px;background:var(--wh-surface);border-right:1px solid var(--wh-line);z-index:5}
 #weharbor-rail .wh-brand{width:36px;height:36px;border-radius:10px;background:linear-gradient(145deg,#0b6e99,#14b8a6);color:#fff;display:grid;place-items:center;font-weight:700;letter-spacing:-.04em;margin-bottom:8px}
 #weharbor-rail .wh-nav{display:flex;flex-direction:column;gap:4px;width:100%;align-items:center;flex:1}
 #weharbor-rail button.wh-nav-btn,#weharbor-top button,#weharbor-side button,#weharbor-apps button,#weharbor-palette button,#weharbor-bottom button{
@@ -136,12 +155,12 @@ html.weharbor-unified.weharbor-focus #app,html.weharbor-unified.weharbor-focus #
 #weharbor-rail button.wh-nav-btn:hover{background:var(--wh-surface-2);color:var(--wh-ink)}
 #weharbor-rail button.wh-nav-btn:focus-visible,#weharbor-top button:focus-visible,#weharbor-side button:focus-visible,#weharbor-apps button:focus-visible,#weharbor-palette button:focus-visible{outline:2px solid var(--wh-accent);outline-offset:2px}
 #weharbor-rail .wh-nav-btn .wh-ico{font-size:18px;line-height:1}
-#weharbor-rail .wh-nav-btn .wh-kbd{position:absolute;bottom:3px;right:4px;font:9px/1 var(--wh-mono);opacity:.45;color:var(--wh-muted)}
+#weharbor-rail .wh-nav-btn .wh-kbd{position:absolute;bottom:2px;right:3px;font:8px/1 var(--wh-mono);opacity:.35;color:var(--wh-muted);pointer-events:none}
 #weharbor-rail .wh-rail-foot{display:flex;flex-direction:column;gap:4px;margin-top:auto}
-#weharbor-top{position:absolute;left:var(--wh-rail);right:0;top:0;height:var(--wh-top);display:flex;align-items:center;gap:10px;padding:0 14px;background:color-mix(in srgb, var(--wh-surface) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--wh-line);z-index:3}
+#weharbor-top{position:absolute;left:var(--wh-rail);right:0;top:0;height:var(--wh-top);display:flex;align-items:center;gap:12px;padding:0 16px;background:color-mix(in srgb, var(--wh-surface) 94%, transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--wh-line);z-index:3}
 #weharbor-top .wh-title{font-weight:650;letter-spacing:-.02em;white-space:nowrap}
 #weharbor-top .wh-chips{display:flex;gap:6px;flex:1;overflow:auto;scrollbar-width:none}
-#weharbor-top .wh-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--wh-surface-2);border:1px solid var(--wh-line);color:var(--wh-muted);white-space:nowrap;font-size:12px}
+#weharbor-top .wh-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--wh-surface-2);border:1px solid var(--wh-line);color:var(--wh-muted);white-space:nowrap;font-size:12px;line-height:1.2;height:26px}
 #weharbor-top .wh-chip[data-state=ok]{color:var(--wh-ok);border-color:color-mix(in srgb, var(--wh-ok) 35%, var(--wh-line))}
 #weharbor-top .wh-chip[data-state=warn]{color:var(--wh-warn)}
 #weharbor-top .wh-chip[data-state=off]{opacity:.65}
@@ -322,7 +341,18 @@ html.weharbor-unified.weharbor-focus #app,html.weharbor-unified.weharbor-focus #
       bottom.hidden = !mobile;
       resizer.hidden = !(sideOpen && !focus);
       if (!resizer.hidden) resizer.style.right = sideWidth + 'px';
-      requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    };
+    // Selkies reads the video parent's getBoundingClientRect() on window.resize.
+    // Fire a few delayed resize events after *our* layout changes (not from the
+    // listener below) so the remote desktop tracks the pane without looping.
+    let bumpTimer = 0;
+    const bumpResolution = () => {
+      const fire = () => window.dispatchEvent(new Event('resize'));
+      clearTimeout(bumpTimer);
+      requestAnimationFrame(fire);
+      bumpTimer = setTimeout(fire, 120);
+      setTimeout(fire, 400);
+      setTimeout(fire, 900);
     };
 
     const ensureFrame = (view) => {
@@ -377,6 +407,7 @@ html.weharbor-unified.weharbor-focus #app,html.weharbor-unified.weharbor-focus #
       write('weharbor-layout', layout);
       write('weharbor-workspace-view', currentView);
       syncLayoutVars();
+      bumpResolution();
       renderNav();
       // Hand focus back to the stream when showing desktop/split.
       if (layout.mode !== 'focus' && currentView === 'desktop') {
@@ -607,7 +638,7 @@ html.weharbor-unified.weharbor-focus #app,html.weharbor-unified.weharbor-focus #
       if (!dragSide || dragSide.id !== event.pointerId) return;
       dragSide = null; resizer.classList.remove('dragging');
       write('weharbor-side-width', sideWidth);
-      window.dispatchEvent(new Event('resize'));
+      bumpResolution();
     };
     resizer.addEventListener('pointerup', endDrag);
     resizer.addEventListener('pointercancel', endDrag);
@@ -628,6 +659,7 @@ html.weharbor-unified.weharbor-focus #app,html.weharbor-unified.weharbor-focus #
     // Restore previous layout; default is WeChat desktop with shell chrome.
     if (layout.mode !== 'desktop') ensureFrame(layout.side);
     syncLayoutVars();
+    bumpResolution();
     renderNav();
     renderShortcuts();
     refresh().catch(() => {});
