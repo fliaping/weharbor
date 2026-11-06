@@ -26,7 +26,7 @@ One browser workspace for official Linux WeChat, chat analytics, Magpie gateway,
 ## 功能一览 / Features
 
 - **统一工作区**：微信 Selkies 画面为主窗格；助手、分析、Magpie、连接可并排或专注全屏。
-- **设计系统**：浅色/深色、中文优先字体栈、状态芯片、命令面板（Ctrl/⌘+K）、Alt+1–5 快捷键。
+- **设计系统**：浅色/深色、中文优先字体栈、状态芯片、命令面板（Ctrl/⌘+K）、Alt+1–5 快捷键（微信 / 分析 / 助手 / Magpie / 连接）。
 - **官方微信 + Alpha**：窗口切换、浏览器通知、HTTP API / MCP / SSE。
 - **分析与助手**：WeFlow 密钥复用、数据库/WAL/图片解密；DeepSeek Harness 经 Magpie 本地网关。
 - **PWA**：可安装为独立窗口；手机底部标签栏适配。
@@ -146,7 +146,8 @@ npx --yes skills add https://github.com/fliaping/weharbor --skill alpha-api --ye
 | BIND_ADDRESS | 127.0.0.1 | 桌面端口绑定地址 |
 | HTTP_PORT / HTTPS_PORT | 3000 / 3001 | 桌面入口 |
 | API_BIND_ADDRESS / API_PORT | 127.0.0.1 / 5031 | 宿主机上的 Alpha API 地址（映射到容器 5032） |
-| AUTO_START_WECHAT / AUTO_START_ALPHA | true | 自动启动应用 |
+| AUTO_START_WECHAT | true | 自动启动微信 |
+| AUTO_START_ALPHA | false | 自动启动 Alpha（可选；网页工作区不再显示 Alpha） |
 | PUID / PGID | init.sh 检测 | 持久化文件所属用户 |
 | ENABLE_APP_SWITCHER | true | 应用切换入口 |
 | APP_SWITCHER_MODE | web | 网页贴边应用条；desktop 恢复旧桌面切换器 |

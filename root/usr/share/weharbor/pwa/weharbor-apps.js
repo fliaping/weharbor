@@ -11,7 +11,7 @@
     }
   } catch {}
 
-  const VIEW_ORDER = ['desktop', 'analysis', 'magpie', 'assistant', 'connections'];
+  const VIEW_ORDER = ['desktop', 'analysis', 'assistant', 'magpie', 'connections'];
   const VIEW_META = {
     desktop: {label: '微信', hint: '官方桌面', icon: 'chat', path: null},
     analysis: {label: '分析', hint: '聊天与媒体', icon: 'chart', path: '/analysis/'},
@@ -82,7 +82,6 @@
     shield: '<path d="M12 3 5 6v5.2c0 4.3 2.9 8 7 9.8 4.1-1.8 7-5.5 7-9.8V6l-7-3Z"/><path d="m9.2 12 2 2 3.8-3.9"/>',
     sparkles: '<path d="M11 3.5 12.9 8.6 18 10.5l-5.1 1.9L11 17.5l-1.9-5.1L4 10.5l5.1-1.9L11 3.5Z"/><path d="m18.5 15 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"/>',
     plug: '<path d="M9 7.5V3M15 7.5V3"/><path d="M6 7.5h12v3.5a6 6 0 0 1-12 0V7.5Z"/><path d="M12 17v4"/>',
-    box: '<path d="M20.5 7.8 12 3.3 3.5 7.8v8.4l8.5 4.5 8.5-4.5V7.8Z"/><path d="m3.5 7.8 8.5 4.5 8.5-4.5M12 12.3v8.4"/>',
     search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
     command: '<path d="M9 6.5A2.5 2.5 0 1 0 6.5 9H17.5A2.5 2.5 0 1 0 15 6.5v11a2.5 2.5 0 1 0 2.5-2.5h-11A2.5 2.5 0 1 0 9 17.5v-11Z"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>',
@@ -436,17 +435,11 @@ html[data-weharbor-theme=dark] #weharbor-apps .wh-seg input:checked + span{backg
       <button type="button" class="wh-icon-btn" data-app="wechat" data-action="restart" title="重启微信" aria-label="重启微信">${icon('refresh', 16)}</button></div>
     <details data-windows="wechat"><summary>微信窗口</summary><div class="app-windows"></div></details>
   </div>
-  <div class="app-card">
-    <div class="app-row"><button type="button" class="app-switch" data-app="alpha" data-action="switch"><span class="app-ico">${icon('box', 16)}</span><span class="app-name">Alpha</span><span class="app-status" data-status="alpha">…</span></button>
-      <button type="button" class="wh-icon-btn" data-app="alpha" data-action="restart" title="重启 Alpha" aria-label="重启 Alpha">${icon('refresh', 16)}</button></div>
-    <details data-windows="alpha"><summary>Alpha 窗口</summary><div class="app-windows"></div></details>
-  </div>
-  <p class="app-hint">点击应用切换；再次点击可轮换窗口。重启前请保存未发送的内容。</p>
+  <p class="app-hint">点击切换到微信；再次点击可轮换微信窗口。重启前请保存未发送的内容。</p>
   <div class="app-settings">
     <div class="wh-sec">通知</div>
     <label class="wh-switch"><span>浏览器通知</span><input type="checkbox" role="switch" data-setting="enabled"></label>
     <label class="wh-switch"><span>微信通知</span><input type="checkbox" role="switch" data-setting="wechat"></label>
-    <label class="wh-switch"><span>Alpha 通知</span><input type="checkbox" role="switch" data-setting="alpha"></label>
     <div class="wh-sec">偏好</div>
     <label class="wh-switch"><span>启用切换快捷键（本浏览器）</span><input type="checkbox" role="switch" data-local="shortcuts"></label>
     <div class="wh-field"><span>外观</span>
@@ -561,6 +554,30 @@ html[data-weharbor-theme=dark] #weharbor-apps .wh-seg input:checked + span{backg
       setTimeout(fire, 900);
     };
 
+    // WeChatDataAnalysis ships its own "AI 助手" page that embeds the same Harness
+    // assistant. In the workspace the assistant is its own window, so hide the
+    // analysis app's entry points and send any remaining /ai navigation there.
+    const ANALYSIS_AI_CSS = '[aria-label="AI 助手"],a[href$="/analysis/ai"],a[href$="/analysis/ai/"]{display:none!important}';
+    const adaptAnalysis = (frame, attempt = 0) => {
+      let doc, win;
+      try { doc = frame.contentDocument; win = frame.contentWindow; } catch { return; }
+      if (!doc || !win) return;
+      if (!doc.getElementById('weharbor-analysis-adapt')) {
+        const css = doc.createElement('style');
+        css.id = 'weharbor-analysis-adapt'; css.textContent = ANALYSIS_AI_CSS;
+        (doc.head || doc.documentElement).appendChild(css);
+      }
+      const isAi = (path) => /\/ai\/?$/.test(String(path || '').split(/[?#]/)[0]);
+      const toAssistant = () => setTimeout(() => showView('assistant'), 0);
+      const router = doc.getElementById('__nuxt')?.__vue_app__?.config?.globalProperties?.$router;
+      if (router && !router.__weharborAi) {
+        router.__weharborAi = true;
+        router.beforeEach((to) => (isAi(to.path) ? (toAssistant(), false) : true));
+        if (isAi(router.currentRoute?.value?.path)) { router.replace('/'); toAssistant(); }
+      } else if (!router && attempt < 20) {
+        setTimeout(() => adaptAnalysis(frame, attempt + 1), 250); // Nuxt may still be mounting
+      }
+    };
     const sideFrame = () => frames.querySelector('[data-frame="' + layout.side + '"]');
     const renderFrameState = () => {
       const frame = layout.mode === 'desktop' ? null : sideFrame();
@@ -582,6 +599,7 @@ html[data-weharbor-theme=dark] #weharbor-apps .wh-seg input:checked + span{backg
           // Ignore the synchronous about:blank load some engines fire on insertion.
           try { if (frame.contentWindow.location.href === 'about:blank') return; } catch {}
           try { hookKeys(frame.contentWindow); } catch {}
+          if (view === 'analysis') adaptAnalysis(frame);
           frame.dataset.loaded = '1';
           delete frame.dataset.failed;
           renderFrameState();
@@ -708,12 +726,11 @@ html[data-weharbor-theme=dark] #weharbor-apps .wh-seg input:checked + span{backg
       const gateway = magpie === 'ok' ? ['ok', '已启用'] : magpie === 'down' ? ['warn', '未就绪'] : ['off', '检查中'];
       chips.innerHTML = [
         chip('微信', appState(status.wechat || {}), 'settings', '微信'),
-        chip('Alpha', appState(status.alpha || {}), 'settings', 'Alpha'),
         chip('脱敏网关', gateway, 'view-magpie', 'Magpie 本地脱敏模型网关'),
       ].join('');
     };
     const render = () => {
-      for (const app of ['wechat', 'alpha']) {
+      for (const app of ['wechat']) {
         const state = status[app] || {};
         const [dot] = appState(state);
         const label = panel.querySelector('[data-status="' + app + '"]');
@@ -742,7 +759,7 @@ html[data-weharbor-theme=dark] #weharbor-apps .wh-seg input:checked + span{backg
           if (!windows.length) list.textContent = '暂无窗口';
         }
         const summary = panel.querySelector('[data-windows="' + app + '"] summary');
-        summary.textContent = (app === 'wechat' ? '微信窗口' : 'Alpha 窗口') + (windows.length ? ' · ' + windows.length : '');
+        summary.textContent = '微信窗口' + (windows.length ? ' · ' + windows.length : '');
       }
       for (const button of panel.querySelectorAll('[data-action]')) {
         button.disabled = busy || !!status[button.dataset.app]?.restarting;
@@ -889,7 +906,7 @@ html[data-weharbor-theme=dark] #weharbor-apps .wh-seg input:checked + span{backg
       const button = event.target.closest('[data-action]');
       if (!button || busy || button.disabled || !button.dataset.app) return;
       const app = button.dataset.app, action = button.dataset.action;
-      const name = app === 'wechat' ? '微信' : 'Alpha';
+      const name = '微信';
       busy = true; render();
       feedback.textContent = name + (action === 'restart' ? '正在重启，请稍候…' : '正在切换…');
       try {

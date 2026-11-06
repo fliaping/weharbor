@@ -26,7 +26,7 @@ services:
       CUSTOM_USER: ${CUSTOM_USER:-weharbor}
       PASSWORD: ${PASSWORD:?Run scripts/init.sh or set PASSWORD in .env}
       AUTO_START_WECHAT: ${AUTO_START_WECHAT:-true}
-      AUTO_START_ALPHA: ${AUTO_START_ALPHA:-true}
+      AUTO_START_ALPHA: ${AUTO_START_ALPHA:-false}
       AUTO_START_QQ: "false"
       ENABLE_APP_SWITCHER: ${ENABLE_APP_SWITCHER:-true}
       APP_SWITCHER_MODE: ${APP_SWITCHER_MODE:-web}

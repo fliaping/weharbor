@@ -3,7 +3,8 @@
 /scripts/notifications/notification-autostart.sh
 /scripts/weharbor/window-autostart.sh
 
-if [ "${AUTO_START_ALPHA:-true}" = "true" ]; then
+# Alpha is optional; the workspace UI is WeChat + analysis + assistant.
+if [ "${AUTO_START_ALPHA:-false}" = "true" ]; then
     # WeChat stores its profile at /config/xwechat_files; Alpha's Linux
     # discovery also checks ~/Documents/xwechat_files. Keep a compatibility
     # link without replacing an existing user-managed path.

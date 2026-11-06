@@ -43,6 +43,16 @@ class HealthcheckTests(unittest.TestCase):
                                     ['pgrep', '-f', f'^/opt/Alpha/resources/bin/{name}( |$)']
                                     for call in run.call_args_list))
 
+    def test_alpha_is_not_required_when_auto_start_is_unset(self):
+        with patch.dict(os.environ, {'AUTO_START_WECHAT': 'false', 'ENABLE_APP_SWITCHER': 'false',
+                                     'ENABLE_MAGPIE': 'false'}, clear=True), \
+                patch.object(health, 'get', return_value=b'{"status":"ok"}') as get, \
+                patch.object(health.subprocess, 'run',
+                             return_value=subprocess.CompletedProcess([], 0)) as run:
+            health.main()
+        self.assertFalse(any('alpha' in ' '.join(call.args[0]) for call in run.call_args_list))
+        self.assertFalse(any(':5031/' in call.args[0] for call in get.call_args_list))
+
     def check(self, asset, mode='web', enabled='true'):
         def get(url, authenticated=False):
             if url.endswith('/weharbor-apps.js'):

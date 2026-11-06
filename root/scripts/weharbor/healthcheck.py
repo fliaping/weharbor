@@ -8,8 +8,8 @@ import sys
 import urllib.request
 
 
-def enabled(name):
-    return os.environ.get(name, 'true').lower() in {'true', '1', 'yes', 'on'}
+def enabled(name, default='true'):
+    return os.environ.get(name, default).lower() in {'true', '1', 'yes', 'on'}
 
 
 def get(url, authenticated=False):
@@ -23,7 +23,7 @@ def get(url, authenticated=False):
 
 def main():
     get('http://127.0.0.1:3000/', authenticated=True)
-    if enabled('AUTO_START_ALPHA'):
+    if enabled('AUTO_START_ALPHA', 'false'):
         subprocess.run(['pgrep', '-x', 'alpha'], check=True, stdout=subprocess.DEVNULL)
         # Electron can stay alive with a blank window while its engine fails
         # security checks and repeatedly restarts. Require the native hosts too.
@@ -55,7 +55,7 @@ def main():
                 raise ValueError('Web application controls are not available')
     # Alpha's API is optional on first launch. /health needs no token, so
     # check it whenever the listener is up (the user enabled it in Alpha).
-    if enabled('AUTO_START_ALPHA'):
+    if enabled('AUTO_START_ALPHA', 'false'):
         port = int(os.environ.get('ALPHA_API_PORT', '5031'))
         try:
             body = get(f'http://127.0.0.1:{port}/health')
