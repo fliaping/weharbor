@@ -259,6 +259,27 @@ for app in ['wechat']:
         raise SystemExit('Switch accepted an unowned window')
 print('Web application switching and ownership passed')
 PY
+# Optional remote access stays idle without configuration and never crash-loops.
+docker exec -i "$container" python3 - <<'PY'
+import json, subprocess, time
+from pathlib import Path
+runtime = Path('/config/.local/share/weharbor/workspace/remote')
+for binary in ['tailscale', 'tailscaled', 'cloudflared', 'frpc']:
+    subprocess.run(['/opt/weharbor/network/' + binary, '--version'], check=True, capture_output=True)
+for name in ['tailscale', 'cloudflare', 'frp']:
+    for _ in range(30):
+        try:
+            state = json.loads((runtime / (name + '.json')).read_text())['state']
+            break
+        except (OSError, ValueError):
+            time.sleep(1)
+    else:
+        raise SystemExit('Remote access status missing: ' + name)
+    assert state == 'disabled', (name, state)
+processes = subprocess.run(['ps', '-eo', 'args'], capture_output=True, text=True).stdout
+assert 'tailscaled' not in processes and 'cloudflared tunnel' not in processes and 'frpc -c' not in processes
+print('Remote access idle by default passed')
+PY
 docker exec -i "$container" python3 - <<'PY'
 import hashlib, json, stat, subprocess
 import urllib.request

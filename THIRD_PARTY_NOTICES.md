@@ -19,6 +19,7 @@ Additional workspace components:
 | Magpie | https://github.com/yetone/magpie | MIT; pinned official Linux CLI/web gateway binary at /opt/weharbor/magpie/magpie. |
 | Tailscale | https://github.com/tailscale/tailscale | BSD-3-Clause; official archive retains its LICENSE under /opt/weharbor/network. |
 | cloudflared | https://github.com/cloudflare/cloudflared | Apache-2.0; pinned official binary. |
+| frp (frpc) | https://github.com/fatedier/frp | Apache-2.0; pinned official release, only `frpc` is installed; LICENSE kept as /opt/weharbor/network/LICENSE.frp. |
 | Node.js | https://nodejs.org/ | MIT and bundled third-party notices; official distribution retains LICENSE under /opt/weharbor/node. |
 
 Qibox informed the Action design; no Qibox code, application files, memory

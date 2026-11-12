@@ -15,6 +15,7 @@ downloads/*
 !downloads/node.tar.xz
 !downloads/tailscale.tgz
 !downloads/cloudflared
+!downloads/frp.tar.gz
 !downloads/magpie
 !runtime/
 !runtime/harness/

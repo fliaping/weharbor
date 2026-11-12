@@ -100,6 +100,14 @@ async def connections():
 async def tailscale_login():
     return await network.login()
 
+@app.get('/remote-access')
+async def remote_access_status():
+    return await network.remote()
+
+@app.post('/remote-access/{name}')
+async def remote_access_update(name: str, request: Request):
+    return await network.update(name, await request.json())
+
 @app.post('/network/cloudflare')
 async def cloudflare_connect(request: Request):
     value = await request.json()

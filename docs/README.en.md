@@ -44,3 +44,11 @@ served at `/workspace/skill/SKILL.md`.
 
 WeHarbor integration code is MIT licensed. Vendor components keep their own
 licenses; see the third-party notices.
+
+## Remote access
+
+Optional, off by default: Tailscale (userspace networking, Headscale/DERP friendly),
+Cloudflare Tunnel and frp. Configure them in Connections (Alt+5) → 远程访问 or with
+`TAILSCALE_*`, `CLOUDFLARE_TUNNEL_*` and `FRP_*` environment variables (env wins).
+Use a strong `PASSWORD` before exposing WeHarbor publicly; add Cloudflare Access, and use
+frp token auth with TLS. Details (Chinese): [remote-access.md](remote-access.md).

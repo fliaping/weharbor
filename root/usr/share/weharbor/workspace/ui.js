@@ -36,11 +36,7 @@
       }
       $('connections').append(row);
     }
-    const ts = data.network.tailscale, cf = data.network.cloudflare;
-    badge('ts-state', !ts.installed ? '未安装' : ts.state === 'Running' ? '已连接' : ts.state || '未连接', ts.state === 'Running');
-    $('ts-ips').textContent = (Array.isArray(ts.ips) ? ts.ips : []).join(' · '); $('ts-login').disabled = !ts.installed;
-    badge('cf-state', !cf.installed ? '未安装' : cf.running ? '连接进程运行中' : cf.configured ? '已配置 · 未运行' : '未配置', cf.running);
-    $('cf-open').disabled = !cf.installed;
+    await refreshRemote();
     $('actions').replaceChildren();
     if (!history.actions.length) { const p = document.createElement('p'); p.className = 'empty subtle'; p.textContent = '暂无操作记录。AI 准备或发送消息后，记录会显示在这里。'; $('actions').append(p); return; }
     const table = document.createElement('table');
@@ -76,16 +72,74 @@
     await api('connections', {connections: [...connections, {id: connectionId(), kind: $('kind').value, url: $('url').value, token: $('connection-token').value, enabled: true}]});
     $('connection-token').value = ''; $('url').value = ''; await refresh();
   }); });
+  const stateLabels = {disabled: ['未启用', ''], starting: ['启动中', 'warn'], running: ['运行中', 'warn'], connected: ['已连接', 'ok'],
+    needs_login: ['需要登录', 'warn'], error: ['错误', 'err'], unknown: ['未知', '']};
+  let remoteDirty = {};
+  function fillRemote(name, info) {
+    const form = $('remote-' + name); if (!form) return;
+    const q = (role) => form.querySelector('[data-role="' + role + '"]');
+    const status = info.status || {}, label = stateLabels[status.state] || [status.state || '未知', ''];
+    q('state').textContent = label[0]; q('state').className = 'badge ' + label[1];
+    q('message').textContent = status.message || ''; q('message').title = status.message || '';
+    const detail = [];
+    if (name === 'tailscale') {
+      const live = info.live || {};
+      if (live.ips?.length) detail.push('Tailnet IP：' + live.ips.join(' · '));
+      if (live.dns) detail.push(info.settings.serve ? 'https://' + live.dns : live.dns);
+      const url = live.auth_url || status.auth_url;
+      const link = q('login'); link.hidden = !url || live.state === 'Running'; if (url) link.href = url;
+    }
+    if (name === 'frp' && info.url) detail.push('访问地址：' + info.url);
+    if (status.retry_in) detail.push(status.retry_in + ' 秒后自动重试');
+    q('detail').textContent = detail.join('　');
+    const log = q('log'), atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
+    log.textContent = (info.log || []).join('\n') || '暂无日志';
+    if (atEnd) log.scrollTop = log.scrollHeight;
+    if (remoteDirty[name]) return;
+    for (const [field, value] of Object.entries(info.settings)) {
+      const input = form.elements[field]; if (!input) continue;
+      if (input.type === 'checkbox') input.checked = !!value; else input.value = value === 0 ? '' : value;
+      const locked = info.locked.includes(field);
+      input.disabled = locked;
+      const holder = input.closest('label');
+      holder.querySelector('.lock')?.remove();
+      if (locked) { const note = document.createElement('span'); note.className = 'lock'; note.textContent = '由环境变量 ' + info.env[field] + ' 设置'; holder.append(note); }
+    }
+    if (name === 'frp') {
+      form.elements.raw.value = info.raw || ''; form.elements.raw.disabled = info.locked.includes('mode');
+      q('raw-path').textContent = info.raw_path; showMode(form);
+    }
+    if (name === 'tailscale') $('ts-login').disabled = !!info.settings.authkey || (info.locked.includes('enabled') && !info.settings.enabled);
+  }
+  function showMode(form) {
+    const mode = form.elements.mode.value;
+    form.querySelectorAll('[data-mode]').forEach((el) => { el.hidden = el.dataset.mode !== mode; });
+  }
+  async function refreshRemote() {
+    const data = await api('remote-access');
+    for (const name of ['tailscale', 'cloudflare', 'frp']) fillRemote(name, data[name]);
+  }
+  for (const form of document.querySelectorAll('form.remote')) {
+    const name = form.dataset.name;
+    form.addEventListener('input', () => { remoteDirty[name] = true; if (form.elements.mode) showMode(form); });
+    form.addEventListener('submit', (e) => { e.preventDefault(); run(e.submitter, async () => {
+      const body = {};
+      for (const input of form.elements) {
+        if (!input.name || input.disabled) continue;
+        body[input.name] = input.type === 'checkbox' ? input.checked : input.value;
+      }
+      if (name === 'frp' && body.mode !== 'raw') delete body.raw;
+      await api('remote-access/' + name, body);
+      remoteDirty[name] = false; await refreshRemote();
+    }); });
+  }
   $('ts-login').addEventListener('click', () => run($('ts-login'), async () => {
     const result = await api('network/tailscale/login', {});
-    if (result.login_url) { $('login-link').href = result.login_url; $('login-link').hidden = false; }
-    await refresh();
+    remoteDirty.tailscale = false; await refreshRemote();
+    if (result.login_url) { const link = $('remote-tailscale').querySelector('[data-role="login"]'); link.href = result.login_url; link.hidden = false; }
+    else if (!result.connected) feedback('Tailscale 正在启动，稍后刷新查看登录链接。');
   }));
-  $('cf-open').addEventListener('click', () => $('cf-dialog').showModal());
-  $('cf-close').addEventListener('click', () => { $('cf-token').value = ''; $('cf-dialog').close(); });
-  $('cf-form').addEventListener('submit', (e) => { e.preventDefault(); run(e.submitter, async () => {
-    await api('network/cloudflare', {token: $('cf-token').value}); $('cf-token').value = ''; $('cf-dialog').close(); await refresh();
-  }); });
+  setInterval(() => { if (!document.hidden) refreshRemote().catch(() => {}); }, 5000);
   $('sync').addEventListener('click', () => run($('sync'), async () => { await api('sync', {}); await refresh(); }));
   const mcp = location.origin + '/workspace/mcp'; $('mcp-url').textContent = mcp;
   $('copy-mcp').addEventListener('click', () => run($('copy-mcp'), async () => {

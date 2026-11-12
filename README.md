@@ -42,7 +42,8 @@ docker compose up -d
 ```
 
 打开 `https://localhost:3001`，使用 `.env` 中的 `CUSTOM_USER` / `PASSWORD` 登录。
-首次 HTTPS 为自签名证书。默认只绑定本机；跨机器请用 Tailscale Serve 或 HTTPS 反向代理（需 WebSocket）。
+首次 HTTPS 为自签名证书。默认只绑定本机；外网访问可在「连接」页（Alt+5）或用环境变量启用内置的
+**Tailscale / Cloudflare Tunnel / frp**，见 [远程访问](docs/remote-access.md)。
 
 预构建镜像：`ghcr.io/fliaping/weharbor:edge`（main）或功能标签如 `magpie-gateway`。
 
@@ -50,7 +51,8 @@ docker compose up -d
 
 - 登录密码与 Token 保存在本机 `.env` / `/config`，**不要**提交到 Git。
 - Magpie 默认对密钥与个人敏感字段做**本地可逆脱敏**后再请求模型。
-- 不建议将 3001 直接暴露公网；优先 Tailscale 或自有反向代理。
+- 不建议将 3001 直接暴露公网；优先 Tailscale。经 Cloudflare Tunnel / frp 公网访问时必须使用强密码，
+  并配合 Cloudflare Access 或 frp Token + TLS，详见 [远程访问](docs/remote-access.md)。
 - 组件许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 架构 / Architecture

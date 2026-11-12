@@ -17,7 +17,7 @@
     analysis: {label: '分析', hint: '聊天与媒体', icon: 'chart', path: '/analysis/'},
     magpie: {label: 'Magpie', hint: '模型网关', icon: 'shield', path: '/magpie/'},
     assistant: {label: '助手', hint: 'DeepSeek', icon: 'sparkles', path: '/assistant/'},
-    connections: {label: '连接', hint: '网络 · MCP', icon: 'plug', path: '/workspace/'},
+    connections: {label: '连接', hint: '远程访问 · MCP', icon: 'plug', path: '/workspace/'},
   };
   const NEAR_PX = 56, COLLAPSE_DELAY_MS = 400;
   const isMac = /Mac|iPhone|iPad/.test(globalThis.navigator?.platform || globalThis.navigator?.userAgent || '');

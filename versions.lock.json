@@ -34,6 +34,14 @@
     "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.10.1/cloudflared-linux-amd64",
     "sha256": "3bfc539f45d2620c71debb7a86be0efa737ed5ccbad9eb85c787116900e5c586"
   },
+  "frp": {
+    "version": "0.72.0",
+    "filename": "frp.tar.gz",
+    "original_filename": "frp_0.72.0_linux_amd64.tar.gz",
+    "url": "https://github.com/fatedier/frp/releases/download/v0.72.0/frp_0.72.0_linux_amd64.tar.gz",
+    "sha256": "daf719b32ca2778770bb92955e231a07414d754378b9af328aa2642862479804",
+    "note": "only frpc is installed"
+  },
   "harness": {
     "version": "0.2.1-rc.2",
     "package": "@deepseek-ai/dsh",

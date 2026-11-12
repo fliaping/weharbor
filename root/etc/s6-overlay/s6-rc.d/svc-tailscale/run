@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+# Optional remote access (tailscale). Idle unless enabled via env or the web UI;
+# see remote_access.py. Runs unprivileged (Tailscale uses userspace networking).
+export HOME=/config
+exec s6-setuidgid abc /opt/weharbor/python/bin/python /scripts/workspace/remote_access.py supervise tailscale
