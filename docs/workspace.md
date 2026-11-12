@@ -35,6 +35,11 @@ does not require attaching to WeChat.
 
 ## Network and MCP
 
+Inbound remote access (Tailscale, Cloudflare Tunnel, frp) is configured under
+Connections → 远程访问 or with environment variables; see [remote-access.md](remote-access.md).
+The connectors run as s6 services; the settings below only describe reading
+another WeHarbor's messages over those transports.
+
 Connections accepts an authenticated remote WeHarbor origin and its workspace
 Bearer token. Direct domain and Cloudflare origins use HTTP(S); Cloudflare
 requires HTTPS. Tailscale uses its userspace outbound HTTP proxy, requiring no
@@ -42,9 +47,9 @@ TUN device or NET_ADMIN. Configure the remote service origin, not an individual
 API URL. Reachable services are probed; failed reads can fall back to another
 configured transport. The local reader is preferred.
 
-Use Tailscale Login to authorize this device in your own tailnet. For public
+Use Tailscale's interactive login to authorize this device in your own tailnet. For public
 Cloudflare access, create a named tunnel, route its hostname to
-`http://127.0.0.1:3000`, and enter its token in Connections. Keep browser
+`http://127.0.0.1:3000`, and enter its token under 远程访问. Keep browser
 authentication enabled. Domain access can also use your existing authenticated
 HTTPS reverse proxy to port 3000. Connector state and tunnel tokens are under
 `/config/.local/share/weharbor/workspace`; remote service configuration is

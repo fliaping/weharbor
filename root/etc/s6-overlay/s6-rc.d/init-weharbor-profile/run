@@ -12,6 +12,14 @@ for directory in /config/.local /config/.local/share /config/.local/share/weharb
     chown abc:abc "${directory}"
     chmod 0700 "${directory}"
 done
+# Remote-access settings (may hold secrets) stay private to abc.
+for file in /config/.config/weharbor/remote-access.json /config/frp/frpc.toml; do
+    if [ -f "${file}" ] && [ ! -L "${file}" ]; then
+        chown abc:abc "${file}" 2>/dev/null || true
+        chmod 0600 "${file}" 2>/dev/null || true
+    fi
+done
+if [ -d /config/frp ] && [ ! -L /config/frp ]; then chown abc:abc /config/frp 2>/dev/null || true; chmod 0700 /config/frp 2>/dev/null || true; fi
 skill_root=/config/.local/share/weharbor/assistant-workspace/.agents/skills
 mkdir -p "${skill_root}"
 ln -sfn /usr/share/weharbor/skills/weharbor-api "${skill_root}/weharbor-api"

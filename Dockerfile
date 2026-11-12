@@ -9,17 +9,19 @@ RUN find /integration -type d -exec chmod 0755 {} + \
     && find /integration -type f -exec chmod 0644 {} +
 
 FROM ${BASE_IMAGE} AS workspace-runtime
-COPY downloads/node.tar.xz downloads/analysis.tar.gz downloads/tailscale.tgz downloads/cloudflared downloads/magpie /tmp/assets/
+COPY downloads/node.tar.xz downloads/analysis.tar.gz downloads/tailscale.tgz downloads/cloudflared downloads/frp.tar.gz downloads/magpie /tmp/assets/
 COPY versions.lock.json /tmp/versions.lock.json
-RUN python3 -c "import hashlib,json,pathlib; lock=json.load(open('/tmp/versions.lock.json')); [(lambda p,c: (None if hashlib.sha256(p.read_bytes()).hexdigest()==c['sha256'] else (_ for _ in ()).throw(ValueError(str(p)))))(pathlib.Path('/tmp/assets')/lock[n]['filename'],lock[n]) for n in ['node','analysis','tailscale','cloudflared','magpie']]" \
+RUN python3 -c "import hashlib,json,pathlib; lock=json.load(open('/tmp/versions.lock.json')); [(lambda p,c: (None if hashlib.sha256(p.read_bytes()).hexdigest()==c['sha256'] else (_ for _ in ()).throw(ValueError(str(p)))))(pathlib.Path('/tmp/assets')/lock[n]['filename'],lock[n]) for n in ['node','analysis','tailscale','cloudflared','frp','magpie']]" \
     && mkdir -p /opt/weharbor/node /opt/weharbor/analysis /opt/weharbor/network /opt/weharbor/magpie \
     && python3 -c "import lzma,shutil; shutil.copyfileobj(lzma.open('/tmp/assets/node.tar.xz'),open('/tmp/node.tar','wb'))" \
     && tar -xf /tmp/node.tar --strip-components=1 -C /opt/weharbor/node \
     && tar -xzf /tmp/assets/analysis.tar.gz --strip-components=1 -C /opt/weharbor/analysis \
     && tar -xzf /tmp/assets/tailscale.tgz --strip-components=1 -C /opt/weharbor/network \
     && cp /tmp/assets/cloudflared /opt/weharbor/network/cloudflared \
+    && mkdir -p /tmp/frp && tar -xzf /tmp/assets/frp.tar.gz --strip-components=1 -C /tmp/frp \
+    && cp /tmp/frp/frpc /opt/weharbor/network/frpc && cp /tmp/frp/LICENSE /opt/weharbor/network/LICENSE.frp \
     && cp /tmp/assets/magpie /opt/weharbor/magpie/magpie \
-    && chmod 0755 /opt/weharbor/network/cloudflared /opt/weharbor/magpie/magpie
+    && chmod 0755 /opt/weharbor/network/cloudflared /opt/weharbor/network/frpc /opt/weharbor/magpie/magpie
 ENV PATH="/opt/weharbor/node/bin:${PATH}"
 WORKDIR /opt/weharbor/analysis/frontend
 RUN npm ci --no-audit --no-fund \
@@ -101,6 +103,8 @@ RUN test -f /defaults/default.conf \
         /scripts/workspace/*.sh /etc/s6-overlay/s6-rc.d/svc-analysis/run \
         /etc/s6-overlay/s6-rc.d/svc-workspace/run /etc/s6-overlay/s6-rc.d/svc-harness/run \
         /etc/s6-overlay/s6-rc.d/svc-magpie/run \
+        /etc/s6-overlay/s6-rc.d/svc-tailscale/run /etc/s6-overlay/s6-rc.d/svc-cloudflared/run \
+        /etc/s6-overlay/s6-rc.d/svc-frpc/run \
         /usr/local/bin/stalonetray /usr/local/bin/weharbor-health /usr/local/bin/weharbor-capture-key \
         /usr/local/bin/dsh /usr/local/bin/xdg-user-dir \
     && chmod 0440 /etc/sudoers.d/weharbor-capture \
